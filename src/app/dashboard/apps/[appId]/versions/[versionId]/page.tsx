@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -103,10 +102,8 @@ export default function VersionPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] flex-col">
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-4xl space-y-8 px-6 py-6">
+    <div className="flex flex-1 flex-col">
+      <div className="flex-1 space-y-8 px-2">
           {/* Version heading + status */}
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2">
@@ -135,8 +132,8 @@ export default function VersionPage() {
           {/* Promotional text */}
           <section className="space-y-2">
             <h3 className="section-title">Promotional text</h3>
-            <Card>
-              <CardContent className="py-3">
+            <Card className="gap-0 py-0">
+              <CardContent className="px-5 py-4">
                 <Textarea
                   value={promotionalText}
                   onChange={(e) => setPromotionalText(e.target.value)}
@@ -144,7 +141,7 @@ export default function VersionPage() {
                   className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
                 />
               </CardContent>
-              <div className="flex items-center justify-end border-t px-4 py-2">
+              <div className="flex items-center justify-end border-t px-3 py-1.5">
                 <CharCount
                   value={promotionalText}
                   limit={FIELD_LIMITS.promotionalText}
@@ -156,8 +153,8 @@ export default function VersionPage() {
           {/* What's new */}
           <section className="space-y-2">
             <h3 className="section-title">What&apos;s new?</h3>
-            <Card>
-              <CardContent className="py-3">
+            <Card className="gap-0 py-0">
+              <CardContent className="px-5 py-4">
                 <Textarea
                   value={whatsNew}
                   onChange={(e) => setWhatsNew(e.target.value)}
@@ -165,7 +162,7 @@ export default function VersionPage() {
                   className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
                 />
               </CardContent>
-              <div className="flex items-center justify-end border-t px-4 py-2">
+              <div className="flex items-center justify-end border-t px-3 py-1.5">
                 <CharCount
                   value={whatsNew}
                   limit={FIELD_LIMITS.whatsNew}
@@ -176,7 +173,6 @@ export default function VersionPage() {
 
           {/* Build */}
           <section className="space-y-2">
-            <Separator />
             <h3 className="section-title">Build</h3>
             {build ? (
               <div className="flex items-center gap-4 rounded-lg border p-4">
@@ -206,7 +202,6 @@ export default function VersionPage() {
 
           {/* App Store version release */}
           <section className="space-y-4">
-            <Separator />
             <h3 className="section-title">App Store version release</h3>
             <p className="text-sm text-muted-foreground">
               To release your app on the App Store, you can either have it
@@ -243,7 +238,6 @@ export default function VersionPage() {
 
           {/* Phased release */}
           <section className="space-y-4 pb-8">
-            <Separator />
             <h3 className="section-title">Phased release</h3>
             <p className="text-sm text-muted-foreground">
               You can release automatic updates gradually over 7 days for App
@@ -265,7 +259,6 @@ export default function VersionPage() {
             </div>
           </section>
         </div>
-      </div>
 
       {/* Bottom bar */}
       <div className="flex items-center justify-between border-t bg-background px-6 py-3">

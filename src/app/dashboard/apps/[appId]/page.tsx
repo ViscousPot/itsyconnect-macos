@@ -32,7 +32,7 @@ export default function AppOverviewPage() {
 
   if (!app) {
     return (
-      <div className="flex items-center justify-center p-6 py-20 text-muted-foreground">
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
         App not found
       </div>
     );
@@ -41,7 +41,7 @@ export default function AppOverviewPage() {
   const latestVersion = versions[0];
 
   return (
-    <div className="space-y-6 overflow-auto p-6">
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-sm">
           <AppWindow size={28} weight="fill" />
