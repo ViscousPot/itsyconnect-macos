@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MOCK_APPS } from "@/lib/mock-data";
 
 export default function AppDetailsPage() {
@@ -29,11 +31,28 @@ export default function AppDetailsPage() {
       {/* Identifiers (read-only) */}
       <section className="space-y-2">
         <h3 className="section-title">Identifiers</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <ReadOnlyField label="Bundle ID" value={app.bundleId} mono />
           <ReadOnlyField label="SKU" value={app.sku} mono />
-          <ReadOnlyField label="Primary language" value={app.primaryLocale} />
         </div>
+      </section>
+
+      {/* Base language */}
+      <section className="space-y-2">
+        <h3 className="section-title">Base language</h3>
+        <Select defaultValue={app.primaryLocale}>
+          <SelectTrigger className="w-[200px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en-US">English (US)</SelectItem>
+            <SelectItem value="en-GB">English (UK)</SelectItem>
+            <SelectItem value="de-DE">German</SelectItem>
+            <SelectItem value="fr-FR">French</SelectItem>
+            <SelectItem value="es-ES">Spanish</SelectItem>
+            <SelectItem value="ja">Japanese</SelectItem>
+          </SelectContent>
+        </Select>
       </section>
 
       {/* Categories */}
@@ -136,12 +155,48 @@ export default function AppDetailsPage() {
         </div>
       </section>
 
+      {/* App Store server notifications */}
+      <section className="space-y-2">
+        <h3 className="section-title">App Store server notifications</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Production URL
+            </label>
+            <Input
+              placeholder="https://"
+              className="font-mono text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">
+              Sandbox URL
+            </label>
+            <Input
+              placeholder="https://"
+              className="font-mono text-sm"
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Content rights */}
       <section className="space-y-2 pb-8">
         <h3 className="section-title">Content rights</h3>
-        <p className="text-sm text-muted-foreground">
-          Does not use third-party content.
-        </p>
+        <RadioGroup defaultValue="none">
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="none" id="cr-none" />
+            <Label htmlFor="cr-none" className="text-sm font-normal">
+              Does not use third-party content
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="has-rights" id="cr-has-rights" />
+            <Label htmlFor="cr-has-rights" className="text-sm font-normal">
+              Contains third-party content and I have the necessary rights
+            </Label>
+          </div>
+        </RadioGroup>
       </section>
     </div>
   );

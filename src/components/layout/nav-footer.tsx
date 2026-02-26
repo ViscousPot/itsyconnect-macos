@@ -41,8 +41,7 @@ export function NavFooter() {
   const { theme, setTheme } = useTheme();
   const { isMobile } = useSidebar();
 
-  async function handleLogout() {
-    await fetch("/api/auth", { method: "DELETE" });
+  function handleLogout() {
     router.push("/login");
     router.refresh();
   }

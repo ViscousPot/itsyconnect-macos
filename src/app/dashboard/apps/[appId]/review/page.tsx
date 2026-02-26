@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MOCK_APPS, resolveVersion } from "@/lib/mock-data";
 
@@ -11,6 +13,7 @@ export default function AppReviewPage() {
   const { appId } = useParams<{ appId: string }>();
   const searchParams = useSearchParams();
   const app = MOCK_APPS.find((a) => a.id === appId);
+  const [signInRequired, setSignInRequired] = useState(false);
 
   const selectedVersion = useMemo(
     () => resolveVersion(appId, searchParams.get("version")),
@@ -47,25 +50,34 @@ export default function AppReviewPage() {
       </section>
 
       {/* Demo account */}
-      <section className="space-y-2">
+      <section className="space-y-4">
         <h3 className="section-title">Demo account</h3>
-        <p className="text-sm text-muted-foreground">
-          If your app requires sign-in, provide credentials for the review team.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Username</label>
-            <Input placeholder="demo@example.com" className="font-mono text-sm" />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Password</label>
-            <Input
-              type="password"
-              placeholder="Password"
-              className="font-mono text-sm"
-            />
-          </div>
+        <div className="flex items-center gap-3">
+          <Switch
+            id="sign-in-required"
+            checked={signInRequired}
+            onCheckedChange={setSignInRequired}
+          />
+          <Label htmlFor="sign-in-required" className="text-sm">
+            Sign-in required
+          </Label>
         </div>
+        {signInRequired && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Username</label>
+              <Input placeholder="demo@example.com" className="font-mono text-sm" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Password</label>
+              <Input
+                type="password"
+                placeholder="Password"
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Contact information */}

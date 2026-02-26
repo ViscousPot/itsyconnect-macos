@@ -1,301 +1,208 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { GearSix, Key, Plugs, Trash, CheckCircle, XCircle, SpinnerGap } from "@phosphor-icons/react";
+import {
+  Plugs,
+  Trash,
+  CheckCircle,
+  XCircle,
+  SpinnerGap,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 
-interface Credential {
-  id: number;
-  label: string;
-  issuerId: string;
-  keyId: string;
-  isActive: boolean;
-  createdAt: string;
-}
+const MOCK_CREDENTIAL = {
+  issuerId: "69a6de7e-6b7b-47e3-e053-5b8c7c11a4d1",
+  keyId: "2X9R4HXF34",
+};
 
 export default function SettingsPage() {
-  const [credentials, setCredentials] = useState<Credential[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [credential, setCredential] = useState(MOCK_CREDENTIAL);
   const [showForm, setShowForm] = useState(false);
+  const [testStatus, setTestStatus] = useState<
+    "idle" | "testing" | "ok" | "error"
+  >("idle");
 
-  useEffect(() => {
-    fetchCredentials();
-  }, []);
-
-  async function fetchCredentials() {
-    try {
-      const res = await fetch("/api/credentials");
-      const data = await res.json();
-      setCredentials(data);
-      setShowForm(data.length === 0);
-    } catch {
-      toast.error("Failed to load credentials");
-    } finally {
-      setLoading(false);
-    }
+  function handleTest() {
+    setTestStatus("testing");
+    setTimeout(() => setTestStatus("ok"), 800);
   }
 
-  async function handleDelete(id: number) {
-    try {
-      await fetch("/api/credentials", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-      toast.success("Credential deleted");
-      fetchCredentials();
-    } catch {
-      toast.error("Failed to delete credential");
-    }
+  function handleDelete() {
+    setCredential(null!);
+    setShowForm(true);
+    toast.success("Credential deleted");
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your App Store Connect credentials
-        </p>
-      </div>
-
-      {loading ? (
-        <Card>
-          <CardContent className="flex items-center justify-center py-8">
-            <SpinnerGap size={24} className="animate-spin text-muted-foreground" />
-          </CardContent>
-        </Card>
-      ) : (
+    <div className="space-y-8">
+      {/* Active credential */}
+      {credential && !showForm && (
         <>
-          {credentials.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Key size={20} />
-                    <CardTitle>Active credentials</CardTitle>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={() => setShowForm(!showForm)}>
-                    {showForm ? "Cancel" : "Replace credentials"}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {credentials.map((cred) => (
-                    <div
-                      key={cred.id}
-                      className="flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{cred.label}</span>
-                          {cred.isActive && (
-                            <Badge variant="default">Active</Badge>
-                          )}
-                        </div>
-                        <div className="flex gap-4 text-sm text-muted-foreground">
-                          <span>Key ID: {cred.keyId}</span>
-                          <span>Issuer: {cred.issuerId.slice(0, 8)}...</span>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(cred.id)}
-                      >
-                        <Trash size={16} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-                <TestConnectionButton />
-              </CardContent>
-            </Card>
-          )}
+          <section className="space-y-2">
+            <h3 className="section-title">Issuer ID</h3>
+            <p className="text-sm font-mono">{credential.issuerId}</p>
+          </section>
 
-          {showForm && <CredentialForm onSuccess={() => { setShowForm(false); fetchCredentials(); }} />}
+          <section className="space-y-2">
+            <h3 className="section-title">Key ID</h3>
+            <p className="text-sm font-mono">{credential.keyId}</p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="section-title">Private key</h3>
+            <p className="text-sm text-muted-foreground">
+              Stored encrypted on the server
+            </p>
+          </section>
+
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={handleTest}
+              disabled={testStatus === "testing"}
+            >
+              <Plugs size={16} />
+              {testStatus === "testing" ? "Testing..." : "Test connection"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowForm(true)}
+            >
+              Replace credentials
+            </Button>
+            <Button variant="ghost" onClick={handleDelete}>
+              <Trash size={16} />
+              Delete
+            </Button>
+            {testStatus === "ok" && (
+              <span className="flex items-center gap-1.5 text-sm text-green-600">
+                <CheckCircle size={16} weight="fill" /> Connected
+              </span>
+            )}
+            {testStatus === "error" && (
+              <span className="flex items-center gap-1.5 text-sm text-destructive">
+                <XCircle size={16} weight="fill" /> Connection failed
+              </span>
+            )}
+          </div>
         </>
       )}
-    </div>
-  );
-}
 
-function TestConnectionButton() {
-  const [status, setStatus] = useState<"idle" | "testing" | "ok" | "error">("idle");
-
-  async function handleTest() {
-    setStatus("testing");
-    try {
-      const res = await fetch("/api/credentials/test", { method: "POST" });
-      setStatus(res.ok ? "ok" : "error");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  return (
-    <div className="mt-4 flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={handleTest} disabled={status === "testing"}>
-        <Plugs size={16} className="mr-2" />
-        {status === "testing" ? "Testing..." : "Test connection"}
-      </Button>
-      {status === "ok" && (
-        <span className="flex items-center gap-1 text-sm text-green-600">
-          <CheckCircle size={16} weight="fill" /> Connected
-        </span>
-      )}
-      {status === "error" && (
-        <span className="flex items-center gap-1 text-sm text-destructive">
-          <XCircle size={16} weight="fill" /> Connection failed
-        </span>
+      {/* Credential form */}
+      {(showForm || !credential) && (
+        <CredentialForm
+          onSuccess={() => {
+            setCredential(MOCK_CREDENTIAL);
+            setShowForm(false);
+          }}
+          onCancel={credential ? () => setShowForm(false) : undefined}
+        />
       )}
     </div>
   );
 }
 
-function CredentialForm({ onSuccess }: { onSuccess: () => void }) {
-  const [label, setLabel] = useState("Default");
+function CredentialForm({
+  onSuccess,
+  onCancel,
+}: {
+  onSuccess: () => void;
+  onCancel?: () => void;
+}) {
   const [issuerId, setIssuerId] = useState("");
   const [keyId, setKeyId] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const text = await file.text();
-    setPrivateKey(text);
-
-    // Try to extract key ID from filename (AuthKey_XXXXXXXXXX.p8)
-    const match = file.name.match(/AuthKey_(\w+)\.p8/);
-    if (match && !keyId) {
-      setKeyId(match[1]);
-    }
+    file.text().then((text) => {
+      setPrivateKey(text);
+      const match = file.name.match(/AuthKey_(\w+)\.p8/);
+      if (match && !keyId) {
+        setKeyId(match[1]);
+      }
+    });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
     setSaving(true);
-
-    try {
-      const res = await fetch("/api/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label, issuerId, keyId, privateKey }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
-
+    setTimeout(() => {
+      setSaving(false);
       toast.success("Credentials saved and verified");
       onSuccess();
-    } catch {
-      setError("Something went wrong");
-    } finally {
-      setSaving(false);
-    }
+    }, 600);
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <GearSix size={20} />
-          <CardTitle>Add App Store Connect credentials</CardTitle>
-        </div>
-        <CardDescription>
-          Create an API key in{" "}
-          <a
-            href="https://appstoreconnect.apple.com/access/integrations/api"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            App Store Connect &rarr; Integrations &rarr; App Store Connect API
-          </a>
-          . Download the .p8 file and enter the details below.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="label">Label</Label>
-            <Input
-              id="label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder="e.g. My Team"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="issuerId">Issuer ID</Label>
-            <Input
-              id="issuerId"
-              value={issuerId}
-              onChange={(e) => setIssuerId(e.target.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              autoFocus
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="keyId">Key ID</Label>
-            <Input
-              id="keyId"
-              value={keyId}
-              onChange={(e) => setKeyId(e.target.value)}
-              placeholder="XXXXXXXXXX"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="p8file">Private key (.p8 file)</Label>
-            <Input
-              id="p8file"
-              type="file"
-              accept=".p8"
-              onChange={handleFileUpload}
-            />
-            {privateKey && (
-              <p className="text-xs text-muted-foreground">
-                Key loaded ({privateKey.length} characters)
-              </p>
-            )}
-            <Textarea
-              value={privateKey}
-              onChange={(e) => setPrivateKey(e.target.value)}
-              placeholder="Or paste the private key content here..."
-              className="font-mono text-xs"
-              rows={4}
-            />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={saving}>
-            {saving ? (
-              <>
-                <SpinnerGap size={16} className="mr-2 animate-spin" />
-                Validating and saving...
-              </>
-            ) : (
-              "Save and verify"
-            )}
+    <form onSubmit={handleSubmit} className="space-y-8">
+      <section className="space-y-2">
+        <h3 className="section-title">Issuer ID</h3>
+        <Input
+          value={issuerId}
+          onChange={(e) => setIssuerId(e.target.value)}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className="max-w-md font-mono text-sm"
+          required
+        />
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="section-title">Key ID</h3>
+        <Input
+          value={keyId}
+          onChange={(e) => setKeyId(e.target.value)}
+          placeholder="XXXXXXXXXX"
+          className="max-w-md font-mono text-sm"
+          required
+        />
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="section-title">Private key</h3>
+        <Input
+          type="file"
+          accept=".p8"
+          onChange={handleFileUpload}
+          className="max-w-md text-sm"
+        />
+        {privateKey && (
+          <p className="text-xs text-muted-foreground">
+            Key loaded ({privateKey.length} characters)
+          </p>
+        )}
+        <Textarea
+          value={privateKey}
+          onChange={(e) => setPrivateKey(e.target.value)}
+          placeholder="Or paste the private key content here..."
+          className="max-w-md font-mono text-xs"
+          rows={4}
+        />
+      </section>
+
+      <div className="flex items-center gap-3">
+        <Button type="submit" disabled={saving}>
+          {saving ? (
+            <>
+              <SpinnerGap size={16} className="animate-spin" />
+              Validating...
+            </>
+          ) : (
+            "Save and verify"
+          )}
+        </Button>
+        {onCancel && (
+          <Button variant="ghost" type="button" onClick={onCancel}>
+            Cancel
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </form>
   );
 }

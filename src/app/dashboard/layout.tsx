@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { DashboardBreadcrumb } from "@/components/layout/dashboard-breadcrumb";
 import { HeaderVersionPicker } from "@/components/layout/header-version-picker";
+import { HeaderBuildsPicker } from "@/components/layout/header-builds-picker";
 
 export default function DashboardLayout({
   children,
@@ -18,11 +19,12 @@ export default function DashboardLayout({
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 !h-4" />
             <DashboardBreadcrumb />
+            <HeaderBuildsPicker />
             <HeaderVersionPicker />
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 pt-6 pb-8">
-          <div className="mx-auto w-full max-w-5xl px-6">
+          <div className="mx-auto w-full max-w-6xl px-6">
             {children}
           </div>
         </div>

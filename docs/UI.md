@@ -89,7 +89,7 @@ The dashboard layout (`src/app/dashboard/layout.tsx`) wraps all page content in:
 
 ```tsx
 <div className="flex flex-1 flex-col gap-4 pt-6 pb-8">
-  <div className="mx-auto w-full max-w-5xl px-6">
+  <div className="mx-auto w-full max-w-6xl px-6">
     {children}
   </div>
 </div>

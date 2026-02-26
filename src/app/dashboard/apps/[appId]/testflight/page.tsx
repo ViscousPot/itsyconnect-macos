@@ -1,15 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useMemo } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -48,42 +40,38 @@ function formatDate(iso: string): string {
 export default function TestFlightBuildsPage() {
   const { appId } = useParams<{ appId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const app = MOCK_APPS.find((a) => a.id === appId);
   const allBuilds = useMemo(() => getAppTFBuilds(appId), [appId]);
 
-  const platforms = useMemo(
-    () => [...new Set(allBuilds.map((b) => b.platform))],
-    [allBuilds],
-  );
-  const [platformFilter, setPlatformFilter] = useState("all");
+  const platformFilter = searchParams.get("platform") ?? "all";
 
-  // Derive versions for the selected platform
-  const versionsForPlatform = useMemo(() => {
-    const platformBuilds =
+  const platformBuilds = useMemo(
+    () =>
       platformFilter === "all"
         ? allBuilds
-        : allBuilds.filter((b) => b.platform === platformFilter);
-    return [...new Set(platformBuilds.map((b) => b.versionString))];
-  }, [allBuilds, platformFilter]);
+        : allBuilds.filter((b) => b.platform === platformFilter),
+    [allBuilds, platformFilter],
+  );
 
-  const [versionFilter, setVersionFilter] = useState("all");
+  const versions = useMemo(
+    () => [...new Set(platformBuilds.map((b) => b.versionString))],
+    [platformBuilds],
+  );
 
-  // Reset version filter when platform changes and version is no longer available
+  const versionParam = searchParams.get("version") ?? "all";
   const effectiveVersion =
-    versionFilter !== "all" && versionsForPlatform.includes(versionFilter)
-      ? versionFilter
+    versionParam !== "all" && versions.includes(versionParam)
+      ? versionParam
       : "all";
 
-  const builds = useMemo(() => {
-    let filtered = allBuilds;
-    if (platformFilter !== "all") {
-      filtered = filtered.filter((b) => b.platform === platformFilter);
-    }
-    if (effectiveVersion !== "all") {
-      filtered = filtered.filter((b) => b.versionString === effectiveVersion);
-    }
-    return filtered;
-  }, [allBuilds, platformFilter, effectiveVersion]);
+  const builds = useMemo(
+    () =>
+      effectiveVersion === "all"
+        ? platformBuilds
+        : platformBuilds.filter((b) => b.versionString === effectiveVersion),
+    [platformBuilds, effectiveVersion],
+  );
 
   // Stats
   const stats = useMemo(() => {
@@ -115,48 +103,6 @@ export default function TestFlightBuildsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Builds</h1>
-        <div className="flex items-center gap-2">
-          {platforms.length > 1 && (
-            <Select
-              value={platformFilter}
-              onValueChange={(v) => {
-                setPlatformFilter(v);
-                setVersionFilter("all");
-              }}
-            >
-              <SelectTrigger className="w-[140px] text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All platforms</SelectItem>
-                {platforms.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {PLATFORM_LABELS[p] ?? p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {versionsForPlatform.length > 1 && (
-            <Select value={effectiveVersion} onValueChange={setVersionFilter}>
-              <SelectTrigger className="w-[140px] text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All versions</SelectItem>
-                {versionsForPlatform.map((v) => (
-                  <SelectItem key={v} value={v}>
-                    {v}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </div>
-
       {/* Stats row */}
       <div className="flex items-center gap-6 text-sm">
         <div>
@@ -194,6 +140,7 @@ export default function TestFlightBuildsPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Build</TableHead>
+            <TableHead>Version</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Groups</TableHead>
             <TableHead className="text-right">Installs</TableHead>
@@ -218,12 +165,12 @@ export default function TestFlightBuildsPage() {
                   )
                 }
               >
+                <TableCell className="font-medium">
+                  {build.buildNumber}
+                </TableCell>
                 <TableCell>
                   <div>
-                    <span className="font-medium">{build.buildNumber}</span>
-                    <span className="ml-1.5 text-muted-foreground">
-                      {build.versionString}
-                    </span>
+                    <span className="text-sm">{build.versionString}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {PLATFORM_LABELS[build.platform] ?? build.platform}
@@ -248,19 +195,20 @@ export default function TestFlightBuildsPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {groups.length > 0
-                      ? groups.map((g) => (
-                          <Badge
-                            key={g.id}
-                            variant="secondary"
-                            className="text-xs font-normal px-1.5"
-                          >
-                            {g.shortLabel}
-                          </Badge>
-                        ))
-                      : <span className="text-sm text-muted-foreground">&ndash;</span>}
-                  </div>
+                  {groups.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {groups.map((g) => (
+                        <div key={g.id} className="flex items-center gap-1.5 text-sm">
+                          <span className={`inline-flex size-4 items-center justify-center rounded text-[10px] font-medium ${g.type === "Internal" ? "bg-muted text-muted-foreground" : "bg-blue-100 text-blue-700"}`}>
+                            {g.type === "Internal" ? "I" : "E"}
+                          </span>
+                          <span>{g.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">&ndash;</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {build.installs > 0 ? build.installs : "–"}

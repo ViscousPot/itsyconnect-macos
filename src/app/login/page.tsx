@@ -18,31 +18,17 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error ?? "Login failed");
-        return;
-      }
-
+    // Mock auth – accept any credentials
+    setTimeout(() => {
+      setLoading(false);
       router.push(from);
       router.refresh();
-    } catch {
-      setError("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
+    }, 300);
   }
 
   return (

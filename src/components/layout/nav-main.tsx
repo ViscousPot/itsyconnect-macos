@@ -76,8 +76,21 @@ export function NavMain({ appId }: { appId: string }) {
   const groups = getNavGroups(appId);
 
   function isActive(href: string): boolean {
-    // Exact match for root pages (Overview, Builds) to avoid matching sub-paths
-    if (href === base || href === `${base}/testflight`) return pathname === href;
+    // Exact match for root pages (Overview)
+    if (href === base) return pathname === href;
+
+    // Builds page: exact match or build detail pages (/testflight/tfb-xxx)
+    // but not other testflight sub-pages (/testflight/groups, /testflight/info, etc.)
+    if (href === `${base}/testflight`) {
+      if (pathname === href) return true;
+      const sub = pathname.replace(href + "/", "");
+      // Build detail IDs don't match known sub-routes
+      return (
+        pathname.startsWith(href + "/") &&
+        !["groups", "info", "feedback"].some((s) => sub.startsWith(s))
+      );
+    }
+
     return pathname === href || pathname.startsWith(href + "/");
   }
 

@@ -25,6 +25,7 @@ import {
 
 const VERSION_PAGES = new Set(["store-listing", "screenshots", "review"]);
 const NEW_VERSION_PAGES = new Set(["", "store-listing", "screenshots", "review"]);
+const SAVE_ONLY_PAGES = new Set(["details"]);
 
 const EDITABLE_STATES = new Set([
   "PREPARE_FOR_SUBMISSION",
@@ -72,7 +73,22 @@ export function HeaderVersionPicker() {
     .replace(/^\//, "")
     .split("/")[0];
 
-  if (!NEW_VERSION_PAGES.has(pageSegment)) return null;
+  if (!NEW_VERSION_PAGES.has(pageSegment) && !SAVE_ONLY_PAGES.has(pageSegment)) return null;
+
+  if (SAVE_ONLY_PAGES.has(pageSegment)) {
+    return (
+      <div className="ml-auto flex items-center gap-2">
+        <Button
+          size="sm"
+          className="h-7 gap-1 text-xs"
+          onClick={() => toast.success("Changes saved (prototype)")}
+        >
+          <FloppyDisk size={12} />
+          Save
+        </Button>
+      </div>
+    );
+  }
 
   const showVersionPicker = VERSION_PAGES.has(pageSegment);
   const platforms = getAppPlatforms(appId);

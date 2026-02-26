@@ -3,10 +3,9 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { AppWindow, ArrowLeft } from "@phosphor-icons/react";
+import { AppWindow } from "@phosphor-icons/react";
 import {
   getTFBuild,
   MOCK_BETA_GROUPS,
@@ -75,15 +74,6 @@ export default function BuildDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Back link */}
-      <Link
-        href={`/dashboard/apps/${appId}/testflight`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft size={14} />
-        Back to builds
-      </Link>
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -160,12 +150,9 @@ export default function BuildDetailPage() {
                 href={`/dashboard/apps/${appId}/testflight/groups/${g.id}`}
                 className="flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-muted/50"
               >
-                <Badge
-                  variant="secondary"
-                  className="text-xs font-normal px-1.5"
-                >
-                  {g.shortLabel}
-                </Badge>
+                <span className={`inline-flex size-4 items-center justify-center rounded text-[10px] font-medium ${g.type === "Internal" ? "bg-muted text-muted-foreground" : "bg-blue-100 text-blue-700"}`}>
+                  {g.type === "Internal" ? "I" : "E"}
+                </span>
                 <span className="text-sm font-medium">{g.name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
                   {g.testerCount} testers

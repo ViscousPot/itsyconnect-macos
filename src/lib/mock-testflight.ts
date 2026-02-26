@@ -75,6 +75,10 @@ export interface MockFeedbackItem {
   platform: string;
   versionString: string;
   buildNumber: string;
+  bundleId: string;
+  device: string;
+  locale: string;
+  battery: number;
   date: string;
 }
 
@@ -224,7 +228,7 @@ export const MOCK_BETA_GROUPS: MockBetaGroup[] = [
   {
     id: "grp-001",
     appId: "app-001",
-    name: "App Store Connect users",
+    name: "Core team",
     type: "Internal",
     shortLabel: "IN",
     testerCount: 4,
@@ -235,7 +239,7 @@ export const MOCK_BETA_GROUPS: MockBetaGroup[] = [
   {
     id: "grp-002",
     appId: "app-001",
-    name: "Beta testers",
+    name: "Reddit testers",
     type: "External",
     shortLabel: "EX",
     testerCount: 6,
@@ -480,6 +484,10 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.3",
     versionString: "2.1.0",
     buildNumber: "142",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 16 Pro",
+    locale: "English (United States)",
+    battery: 72,
     date: "2026-02-25T09:15:00Z",
   },
   {
@@ -492,6 +500,10 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.3",
     versionString: "2.1.0",
     buildNumber: "142",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 16",
+    locale: "English (United States)",
+    battery: 45,
     date: "2026-02-24T14:20:00Z",
   },
   {
@@ -504,6 +516,10 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.3",
     versionString: "2.1.0",
     buildNumber: "142",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 15",
+    locale: "English (United States)",
+    battery: 88,
     date: "2026-02-22T07:30:00Z",
   },
   {
@@ -516,6 +532,10 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.3",
     versionString: "2.1.0",
     buildNumber: "142",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 15 Pro",
+    locale: "English (United Kingdom)",
+    battery: 60,
     date: "2026-02-18T16:45:00Z",
   },
   {
@@ -528,6 +548,10 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.2",
     versionString: "2.0.1",
     buildNumber: "138",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 15",
+    locale: "Dutch (Netherlands)",
+    battery: 31,
     date: "2026-02-10T11:00:00Z",
   },
   {
@@ -540,11 +564,19 @@ export const MOCK_FEEDBACK: MockFeedbackItem[] = [
     platform: "iOS 19.3",
     versionString: "2.0.1",
     buildNumber: "138",
+    bundleId: "com.example.weatherly",
+    device: "iPhone 16 Pro",
+    locale: "English (United States)",
+    battery: 54,
     date: "2026-01-28T20:00:00Z",
   },
 ];
 
 // ---------- Helpers ----------
+
+export function getFeedbackItem(feedbackId: string): MockFeedbackItem | undefined {
+  return MOCK_FEEDBACK.find((f) => f.id === feedbackId);
+}
 
 export function getTFBuild(buildId: string): MockTFBuild | undefined {
   return MOCK_TF_BUILDS.find((b) => b.id === buildId);
