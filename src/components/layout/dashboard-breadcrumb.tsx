@@ -9,26 +9,33 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { MOCK_APPS, getVersion } from "@/lib/mock-data";
+import { MOCK_APPS } from "@/lib/mock-data";
 
-const PLATFORM_LABELS: Record<string, string> = {
-  IOS: "iOS",
-  MAC_OS: "macOS",
-  TV_OS: "tvOS",
-  VISION_OS: "visionOS",
+const PAGE_TITLES: Record<string, string> = {
+  "store-listing": "Store listing",
+  screenshots: "Screenshots",
+  review: "App review",
+  testflight: "TestFlight",
+  reviews: "Reviews",
+  analytics: "Analytics",
+  details: "App details",
+  pricing: "Pricing",
+  iap: "In-app purchases",
+  privacy: "Privacy",
 };
 
 export function DashboardBreadcrumb() {
   const pathname = usePathname();
-  const { appId, versionId } = useParams<{
-    appId?: string;
-    versionId?: string;
-  }>();
+  const { appId } = useParams<{ appId?: string }>();
 
   const app = appId ? MOCK_APPS.find((a) => a.id === appId) : undefined;
-  const version = versionId ? getVersion(versionId) : undefined;
-
   const isSettings = pathname.startsWith("/dashboard/settings");
+
+  // Extract the page segment after /dashboard/apps/[appId]/
+  const pageSegment = appId
+    ? pathname.replace(`/dashboard/apps/${appId}`, "").replace(/^\//, "").split("/")[0]
+    : "";
+  const pageTitle = PAGE_TITLES[pageSegment] ?? "";
 
   return (
     <Breadcrumb>
@@ -44,14 +51,11 @@ export function DashboardBreadcrumb() {
                 {app.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
-            {version && (
+            {pageTitle && (
               <>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>
-                    {version.versionString} on{" "}
-                    {PLATFORM_LABELS[version.platform] ?? version.platform}
-                  </BreadcrumbPage>
+                  <BreadcrumbPage>{pageTitle}</BreadcrumbPage>
                 </BreadcrumbItem>
               </>
             )}

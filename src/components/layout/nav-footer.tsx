@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { Plus, GearSix, SignOut } from "@phosphor-icons/react";
+import { useRouter } from "next/navigation";
+import { GearSix, SignOut } from "@phosphor-icons/react";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -11,7 +11,6 @@ import {
 
 export function NavFooter() {
   const router = useRouter();
-  const { appId } = useParams<{ appId?: string }>();
 
   async function handleLogout() {
     await fetch("/api/auth", { method: "DELETE" });
@@ -21,16 +20,6 @@ export function NavFooter() {
 
   return (
     <SidebarMenu>
-      {appId && (
-        <SidebarMenuItem>
-          <SidebarMenuButton asChild tooltip="New version">
-            <Link href={`/dashboard/apps/${appId}/versions/new`}>
-              <Plus size={16} />
-              <span>New version</span>
-            </Link>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      )}
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip="Settings">
           <Link href="/dashboard/settings">

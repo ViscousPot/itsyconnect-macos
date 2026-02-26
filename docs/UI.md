@@ -68,9 +68,55 @@ Key rules:
 
 ## Layout
 
-- Sidebar follows the shadcn sidebar-07 pattern (app switcher, collapsible nav, footer)
-- Pages that need full-bleed elements (sticky bottom bars, custom headers) use `overflow-hidden` on the layout's `<main>` and handle their own scrolling
-- Pages with standard content use `overflow-auto p-6` on their root div
+### Dashboard layout
+
+The dashboard layout (`src/app/dashboard/layout.tsx`) wraps all page content in:
+
+```tsx
+<div className="flex flex-1 flex-col gap-4 px-8 pb-8">
+  <div className="w-full max-w-3xl">
+    {children}
+  </div>
+</div>
+```
+
+**All horizontal padding comes from the layout.** Pages must never add their own `px-*` to the root element – this causes double-padding inconsistency.
+
+**Content is capped at `max-w-3xl` (48rem) and left-aligned.** This keeps form pages readable on wide screens. Pages must not override this width – it is set once in the layout.
+
+### Page root patterns
+
+Standard content pages use a simple container:
+
+```tsx
+<div className="space-y-6">
+  <h1 className="text-2xl font-bold tracking-tight">Page title</h1>
+  {/* content */}
+</div>
+```
+
+Pages with a sticky bottom bar use a flex column:
+
+```tsx
+<div className="flex flex-1 flex-col">
+  <div className="flex-1 space-y-6">
+    {/* scrollable content – no px here, layout handles it */}
+  </div>
+  <div className="sticky bottom-0 flex items-center justify-end border-t bg-background py-3">
+    {/* actions – no px here, layout handles it */}
+  </div>
+</div>
+```
+
+### Sidebar
+
+- Follows the shadcn sidebar-07 pattern (app switcher, grouped nav, footer)
+- Nav groups: Release, Testing, Insights, Configure
+- Version bar appears in page content header for version-scoped pages, not in the sidebar
+
+### Version bar
+
+Version-scoped pages (store listing, screenshots, app review) show a `<VersionBar>` as their first element with platform/version selectors and status badge.
 
 ## Colours
 

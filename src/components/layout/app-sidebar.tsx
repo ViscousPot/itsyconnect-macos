@@ -7,10 +7,8 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { AppSwitcher } from "./app-switcher";
-import { NavVersions } from "./nav-versions";
 import { NavMain } from "./nav-main";
 import { NavFooter } from "./nav-footer";
 
@@ -23,13 +21,7 @@ export function AppSidebar() {
         <AppSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {appId && (
-          <>
-            <NavVersions appId={appId} />
-            <SidebarSeparator />
-            <NavMain appId={appId} />
-          </>
-        )}
+        {appId && <NavMain appId={appId} />}
       </SidebarContent>
       <SidebarFooter>
         <NavFooter />

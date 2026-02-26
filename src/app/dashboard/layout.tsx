@@ -20,7 +20,9 @@ export default function DashboardLayout({
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 px-8 pb-8">
-          {children}
+          <div className="w-full max-w-3xl">
+            {children}
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

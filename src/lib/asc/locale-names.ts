@@ -45,6 +45,8 @@ export function localeName(locale: string): string {
 }
 
 export const FIELD_LIMITS: Record<string, number> = {
+  name: 30,
+  subtitle: 30,
   description: 4000,
   keywords: 100,
   whatsNew: 4000,
