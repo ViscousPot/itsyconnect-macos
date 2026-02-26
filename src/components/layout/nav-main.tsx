@@ -12,6 +12,9 @@ import {
   ChartLineUp,
   CurrencyDollar,
   Info,
+  Package,
+  UsersThree,
+  ChatDots,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import {
@@ -56,9 +59,12 @@ function getNavGroups(appId: string): NavGroup[] {
       ],
     },
     {
-      label: "Testing",
+      label: "TestFlight",
       items: [
-        { title: "TestFlight", href: `${base}/testflight`, icon: PaperPlaneTilt },
+        { title: "Builds", href: `${base}/testflight`, icon: Package },
+        { title: "Groups", href: `${base}/testflight/groups`, icon: UsersThree },
+        { title: "Info", href: `${base}/testflight/info`, icon: Info },
+        { title: "Feedback", href: `${base}/testflight/feedback`, icon: ChatDots },
       ],
     },
   ];
@@ -70,8 +76,8 @@ export function NavMain({ appId }: { appId: string }) {
   const groups = getNavGroups(appId);
 
   function isActive(href: string): boolean {
-    // Overview is an exact match to avoid matching all sub-paths
-    if (href === base) return pathname === base;
+    // Exact match for root pages (Overview, Builds) to avoid matching sub-paths
+    if (href === base || href === `${base}/testflight`) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
   }
 
