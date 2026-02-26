@@ -6,7 +6,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import { AppSwitcher } from "./app-switcher";
 import { NavMain } from "./nav-main";
@@ -17,8 +16,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <AppSwitcher />
+      <SidebarHeader className="drag pt-8">
+        <div className="no-drag">
+          <AppSwitcher />
+        </div>
       </SidebarHeader>
       <SidebarContent>
         {appId && <NavMain appId={appId} />}
@@ -26,7 +27,6 @@ export function AppSidebar() {
       <SidebarFooter>
         <NavFooter />
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

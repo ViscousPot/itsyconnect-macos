@@ -118,10 +118,20 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  *:focus {
+    outline: none;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans select-none;
+  }
+  input,
+  textarea,
+  [contenteditable="true"],
+  pre,
+  code {
+    @apply select-text;
   }
 }
 
@@ -130,4 +140,12 @@
   .section-title {
     @apply text-base font-medium tracking-tight;
   }
+}
+
+/* Electron window drag regions */
+.drag {
+  -webkit-app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
 }

@@ -28,6 +28,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const TOTAL_STEPS = 3;
 
+function DragBar() {
+  return <div className="drag fixed top-0 left-0 right-0 h-8 z-50" />;
+}
+
 export default function SetupPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
@@ -223,7 +227,8 @@ export default function SetupPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="fixed top-4 right-4">
+      <DragBar />
+      <div className="no-drag fixed top-4 right-4">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md space-y-8">

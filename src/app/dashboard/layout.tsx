@@ -1,9 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { Separator } from "@/components/ui/separator";
 import { DashboardBreadcrumb } from "@/components/layout/dashboard-breadcrumb";
 import { HeaderVersionPicker } from "@/components/layout/header-version-picker";
 import { HeaderBuildsPicker } from "@/components/layout/header-builds-picker";
@@ -19,10 +18,8 @@ export default function DashboardLayout({
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-            <div className="flex flex-1 items-center gap-2 px-4">
-              <SidebarTrigger className="-ml-1" />
-              <Separator orientation="vertical" className="mr-2 !h-4" />
+          <header className="drag sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+            <div className="no-drag flex flex-1 items-center gap-2 px-4">
               <DashboardBreadcrumb />
               <Suspense>
                 <HeaderBuildsPicker />

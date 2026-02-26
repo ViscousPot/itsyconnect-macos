@@ -145,14 +145,14 @@ export function DashboardBreadcrumb() {
             </BreadcrumbItem>
             {pageSegment === "testflight" ? (
               renderTestFlightCrumbs()
-            ) : PAGE_TITLES[pageSegment] ? (
+            ) : (
               <>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>{PAGE_TITLES[pageSegment]}</BreadcrumbPage>
+                  <BreadcrumbPage>{PAGE_TITLES[pageSegment] ?? "Overview"}</BreadcrumbPage>
                 </BreadcrumbItem>
               </>
-            ) : null}
+            )}
           </>
         ) : (
           <BreadcrumbItem>

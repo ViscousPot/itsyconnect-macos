@@ -116,10 +116,6 @@ function createWindow(port: number): void {
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);
 
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
-
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
