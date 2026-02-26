@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { DashboardBreadcrumb } from "@/components/layout/dashboard-breadcrumb";
-import { HeaderVersionPicker, HeaderVersionActions } from "@/components/layout/header-version-picker";
+import { HeaderVersionPicker, HeaderVersionActions, HeaderRefreshButton } from "@/components/layout/header-version-picker";
 import { HeaderBuildsPicker } from "@/components/layout/header-builds-picker";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AppsProvider, useApps } from "@/lib/apps-context";
@@ -56,6 +56,9 @@ export default function DashboardLayout({
                 </Suspense>
                 <Suspense>
                   <HeaderBuildsPicker />
+                </Suspense>
+                <Suspense>
+                  <HeaderRefreshButton />
                 </Suspense>
                 <ThemeToggle />
               </div>

@@ -1,12 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import {
   useParams,
   usePathname,
   useSearchParams,
   useRouter,
 } from "next/navigation";
-import { FloppyDisk, Plus } from "@phosphor-icons/react";
+import { ArrowsClockwise, FloppyDisk, Plus } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -197,5 +198,41 @@ export function HeaderVersionActions() {
         </Button>
       )}
     </>
+  );
+}
+
+export function HeaderRefreshButton() {
+  const { appId } = useParams<{ appId?: string }>();
+  const { loading, refresh } = useVersions();
+  const [refreshing, setRefreshing] = useState(false);
+
+  if (!appId) return null;
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await fetch("/api/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resource: `versions:${appId}` }),
+      });
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const busy = loading || refreshing;
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="ml-2 size-7"
+      onClick={handleRefresh}
+      disabled={busy}
+    >
+      <ArrowsClockwise size={14} className={busy ? "animate-spin" : ""} />
+    </Button>
   );
 }
