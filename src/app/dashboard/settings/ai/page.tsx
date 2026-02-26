@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeSlash } from "@phosphor-icons/react";
+import { Eye, EyeSlash, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { AI_PROVIDERS } from "@/lib/ai-providers";
 
@@ -19,11 +19,31 @@ export default function AISettingsPage() {
   const [modelId, setModelId] = useState("claude-sonnet-4-20250514");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const provider = useMemo(
     () => AI_PROVIDERS.find((p) => p.id === providerId)!,
     [providerId],
   );
+
+  const fetchSettings = useCallback(async () => {
+    const res = await fetch("/api/settings/ai");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.settings) {
+        setProviderId(data.settings.provider);
+        setModelId(data.settings.modelId);
+        setHasExistingKey(data.settings.hasApiKey);
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   function handleProviderChange(id: string) {
     setProviderId(id);
@@ -33,8 +53,41 @@ export default function AISettingsPage() {
     setShowKey(false);
   }
 
-  function handleSave() {
-    toast.success("AI settings saved (prototype)");
+  async function handleSave() {
+    setSaving(true);
+
+    try {
+      const body: Record<string, string> = { provider: providerId, modelId };
+      if (apiKey.trim()) body.apiKey = apiKey.trim();
+
+      const res = await fetch("/api/settings/ai", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        toast.success("AI settings saved");
+        setHasExistingKey(!!apiKey.trim());
+        setApiKey("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <SpinnerGap size={16} className="animate-spin" />
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -80,17 +133,17 @@ export default function AISettingsPage() {
 
       <section className="space-y-2">
         <h3 className="section-title">API key</h3>
-        <p className="text-sm text-muted-foreground">
-          Stored encrypted on the server. Reads from{" "}
-          <span className="font-mono text-xs">{provider.envVar}</span> if not
-          set here.
-        </p>
+        {hasExistingKey && (
+          <p className="text-sm text-muted-foreground">
+            An API key is stored. Enter a new key to replace it.
+          </p>
+        )}
         <div className="flex items-center gap-2 max-w-md">
           <Input
             type={showKey ? "text" : "password"}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-..."
+            placeholder={hasExistingKey ? "Enter new key to replace" : "Paste your API key"}
             className="font-mono text-sm"
           />
           <Button
@@ -104,7 +157,16 @@ export default function AISettingsPage() {
         </div>
       </section>
 
-      <Button onClick={handleSave}>Save</Button>
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? (
+          <>
+            <SpinnerGap size={16} className="animate-spin" />
+            Saving...
+          </>
+        ) : (
+          "Save"
+        )}
+      </Button>
     </div>
   );
 }

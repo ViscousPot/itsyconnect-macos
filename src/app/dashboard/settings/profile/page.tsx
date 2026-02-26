@@ -1,18 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
 export default function ProfileSettingsPage() {
-  const [name, setName] = useState("Admin");
-  const [email, setEmail] = useState("admin@itsyship.local");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  function handleSave(e: React.FormEvent) {
+  const fetchProfile = useCallback(async () => {
+    const res = await fetch("/api/settings/profile");
+    if (res.ok) {
+      const data = await res.json();
+      setName(data.user.name);
+      setEmail(data.user.email);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  async function handleSave(e: React.FormEvent) {
     e.preventDefault();
 
     if (newPassword && newPassword !== confirmPassword) {
@@ -25,10 +42,44 @@ export default function ProfileSettingsPage() {
       return;
     }
 
-    toast.success("Profile saved (prototype)");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    setSaving(true);
+
+    try {
+      const body: Record<string, string> = { name, email };
+      if (newPassword) {
+        body.currentPassword = currentPassword;
+        body.newPassword = newPassword;
+      }
+
+      const res = await fetch("/api/settings/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        toast.success("Profile saved");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+
+    setSaving(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <SpinnerGap size={16} className="animate-spin" />
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -96,7 +147,16 @@ export default function ProfileSettingsPage() {
         </div>
       </section>
 
-      <Button type="submit">Save</Button>
+      <Button type="submit" disabled={saving}>
+        {saving ? (
+          <>
+            <SpinnerGap size={16} className="animate-spin" />
+            Saving...
+          </>
+        ) : (
+          "Save"
+        )}
+      </Button>
     </form>
   );
 }

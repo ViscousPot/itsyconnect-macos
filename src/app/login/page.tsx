@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,19 +17,49 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  useEffect(() => {
+    fetch("/api/health")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.setup) {
+          router.replace("/setup");
+        } else {
+          setReady(true);
+        }
+      })
+      .catch(() => setReady(true));
+  }, [router]);
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Mock auth – accept any credentials
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Sign in failed");
+        setLoading(false);
+        return;
+      }
+
       router.push(from);
       router.refresh();
-    }, 300);
+    } catch {
+      setError("Network error");
+      setLoading(false);
+    }
   }
+
+  if (!ready) return null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">

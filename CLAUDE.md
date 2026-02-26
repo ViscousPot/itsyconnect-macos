@@ -8,6 +8,7 @@ Before writing any code, read these docs:
 
 - **[docs/UI.md](docs/UI.md)** – typography, icons, component patterns, form conventions, layout rules. All UI must follow these conventions exactly.
 - **[docs/BACKEND.md](docs/BACKEND.md)** – architecture, security model, database schema, caching strategy, API conventions, testing. All server-side code must follow these conventions.
+- **[PLAN.md](PLAN.md)** – phased backend implementation plan (B0–B10). Check current progress before starting work.
 
 ## Project rules
 

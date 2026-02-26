@@ -9,7 +9,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/lib/**/*.ts"],
-      exclude: ["src/lib/utils.ts", "src/lib/session.ts", "src/lib/asc/**"],
+      exclude: ["src/lib/utils.ts"],
       thresholds: {
         lines: 100,
         functions: 100,

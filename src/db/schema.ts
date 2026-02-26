@@ -1,28 +1,58 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { ulid } from "@/lib/ulid";
+
+// --- Users ---
+
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey().$defaultFn(ulid),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role", { enum: ["admin", "member"] }).notNull().default("member"),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
+// --- ASC credentials ---
 
 export const ascCredentials = sqliteTable("asc_credentials", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  label: text("label").notNull(),
+  id: text("id").primaryKey().$defaultFn(ulid),
   issuerId: text("issuer_id").notNull(),
   keyId: text("key_id").notNull(),
   encryptedPrivateKey: text("encrypted_private_key").notNull(),
   iv: text("iv").notNull(),
   authTag: text("auth_tag").notNull(),
   encryptedDek: text("encrypted_dek").notNull(),
-  keyVersion: integer("key_version").notNull().default(1),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: text("created_at")
     .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => new Date().toISOString()),
 });
 
-export const settings = sqliteTable("settings", {
-  key: text("key").primaryKey(),
-  value: text("value").notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+// --- AI settings ---
+
+export const aiSettings = sqliteTable("ai_settings", {
+  id: text("id").primaryKey().$defaultFn(ulid),
+  provider: text("provider").notNull(),
+  modelId: text("model_id").notNull(),
+  encryptedApiKey: text("encrypted_api_key").notNull(),
+  iv: text("iv").notNull(),
+  authTag: text("auth_tag").notNull(),
+  encryptedDek: text("encrypted_dek").notNull(),
+  updatedAt: text("updated_at")
     .notNull()
-    .$defaultFn(() => new Date()),
+    .$defaultFn(() => new Date().toISOString()),
+});
+
+// --- Cache ---
+
+export const cacheEntries = sqliteTable("cache_entries", {
+  resource: text("resource").primaryKey(),
+  data: text("data").notNull(),
+  fetchedAt: integer("fetched_at").notNull(),
+  ttlMs: integer("ttl_ms").notNull(),
 });

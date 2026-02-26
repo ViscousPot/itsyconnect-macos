@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,22 @@ const TOTAL_STEPS = 3;
 
 export default function SetupPage() {
   const router = useRouter();
+  const [ready, setReady] = useState(false);
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/health")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.setup) {
+          router.replace("/login");
+        } else {
+          setReady(true);
+        }
+      })
+      .catch(() => setReady(true));
+  }, [router]);
 
   // Step 1 – account
   const [name, setName] = useState("");
@@ -44,6 +59,7 @@ export default function SetupPage() {
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "ok" | "error"
   >("idle");
+  const [testError, setTestError] = useState("");
 
   // Step 3 – AI
   const [providerId, setProviderId] = useState("anthropic");
@@ -64,12 +80,45 @@ export default function SetupPage() {
     setShowKey(false);
   }
 
+  async function testConnection(
+    testIssuerId: string,
+    testKeyId: string,
+    testPrivateKey: string,
+  ) {
+    setTestStatus("testing");
+    setTestError("");
+
+    try {
+      const res = await fetch("/api/setup/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          issuerId: testIssuerId,
+          keyId: testKeyId,
+          privateKey: testPrivateKey,
+        }),
+      });
+
+      if (res.ok) {
+        setTestStatus("ok");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setTestStatus("error");
+        setTestError(data.error || "Connection failed");
+      }
+    } catch {
+      setTestStatus("error");
+      setTestError("Network error");
+    }
+  }
+
   function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setKeyError("");
     setTestStatus("idle");
+    setTestError("");
     setPrivateKey("");
     setKeyId("");
     setKeyIdFromFile(false);
@@ -96,9 +145,9 @@ export default function SetupPage() {
       }
 
       // Auto-test connection if issuer ID is filled
-      if (issuerId.trim() && (match || keyId.trim())) {
-        setTestStatus("testing");
-        setTimeout(() => setTestStatus("ok"), 800);
+      const resolvedKeyId = match ? match[1] : keyId.trim();
+      if (issuerId.trim() && resolvedKeyId) {
+        testConnection(issuerId.trim(), resolvedKeyId, trimmed);
       }
     });
   }
@@ -122,19 +171,65 @@ export default function SetupPage() {
     return true;
   }
 
+  async function handleSubmit() {
+    setSubmitting(true);
+
+    try {
+      const body: Record<string, string> = {
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      };
+
+      // Include ASC credentials if provided
+      if (issuerId.trim() && keyId.trim() && privateKey.trim()) {
+        body.issuerId = issuerId.trim();
+        body.keyId = keyId.trim();
+        body.privateKey = privateKey;
+      }
+
+      // Include AI settings if provided
+      if (apiKey.trim()) {
+        body.aiProvider = providerId;
+        body.aiModelId = modelId;
+        body.aiApiKey = apiKey.trim();
+      }
+
+      const res = await fetch("/api/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Setup failed");
+        setSubmitting(false);
+        return;
+      }
+
+      toast.success("Setup complete");
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      toast.error("Network error");
+      setSubmitting(false);
+    }
+  }
+
   function handleNext() {
     if (step < TOTAL_STEPS) {
       setStep(step + 1);
     } else {
-      toast.success("Setup complete");
-      router.push("/dashboard");
+      handleSubmit();
     }
   }
 
   function handleFinish() {
-    toast.success("Setup complete");
-    router.push("/dashboard");
+    handleSubmit();
   }
+
+  if (!ready) return null;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
@@ -287,7 +382,7 @@ export default function SetupPage() {
                   {testStatus === "error" && (
                     <p className="flex items-center gap-1.5 text-xs text-destructive">
                       <XCircle size={14} weight="fill" />
-                      Connection failed – check your credentials.
+                      {testError || "Connection failed – check your credentials."}
                     </p>
                   )}
                   {testStatus === "idle" && !keyIdFromFile && (
@@ -382,7 +477,11 @@ export default function SetupPage() {
         {/* Navigation */}
         <div className="flex items-center justify-between">
           {step > 1 ? (
-            <Button variant="ghost" onClick={() => setStep(step - 1)}>
+            <Button
+              variant="ghost"
+              onClick={() => setStep(step - 1)}
+              disabled={submitting}
+            >
               Back
             </Button>
           ) : (
@@ -390,12 +489,28 @@ export default function SetupPage() {
           )}
           <div className="flex items-center gap-2">
             {step === 3 && !apiKey && (
-              <Button variant="ghost" onClick={handleFinish}>
+              <Button
+                variant="ghost"
+                onClick={handleFinish}
+                disabled={submitting}
+              >
                 Skip
               </Button>
             )}
-            <Button onClick={handleNext} disabled={!canAdvance()}>
-              {step === TOTAL_STEPS ? "Finish" : "Continue"}
+            <Button
+              onClick={handleNext}
+              disabled={!canAdvance() || submitting}
+            >
+              {submitting ? (
+                <>
+                  <SpinnerGap size={16} className="animate-spin" />
+                  Setting up...
+                </>
+              ) : step === TOTAL_STEPS ? (
+                "Finish"
+              ) : (
+                "Continue"
+              )}
             </Button>
           </div>
         </div>

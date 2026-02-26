@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,27 +12,71 @@ import {
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
-const MOCK_CREDENTIAL = {
-  issuerId: "69a6de7e-6b7b-47e3-e053-5b8c7c11a4d1",
-  keyId: "2X9R4HXF34",
-};
+interface Credential {
+  id: string;
+  issuerId: string;
+  keyId: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 export default function SettingsPage() {
-  const [credential, setCredential] = useState(MOCK_CREDENTIAL);
+  const [credential, setCredential] = useState<Credential | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "ok" | "error"
   >("idle");
 
-  function handleTest() {
+  const fetchCredential = useCallback(async () => {
+    const res = await fetch("/api/settings/credentials");
+    if (res.ok) {
+      const data = await res.json();
+      setCredential(data.credential);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchCredential();
+  }, [fetchCredential]);
+
+  async function handleTest() {
+    if (!credential) return;
     setTestStatus("testing");
-    setTimeout(() => setTestStatus("ok"), 800);
+
+    try {
+      const res = await fetch("/api/settings/credentials/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: credential.id }),
+      });
+
+      setTestStatus(res.ok ? "ok" : "error");
+    } catch {
+      setTestStatus("error");
+    }
   }
 
-  function handleDelete() {
-    setCredential(null!);
+  async function handleDelete() {
+    if (!credential) return;
+
+    await fetch(`/api/settings/credentials?id=${credential.id}`, {
+      method: "DELETE",
+    });
+
+    setCredential(null);
     setShowForm(true);
     toast.success("Credential deleted");
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <SpinnerGap size={16} className="animate-spin" />
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -94,7 +138,7 @@ export default function SettingsPage() {
       {(showForm || !credential) && (
         <CredentialForm
           onSuccess={() => {
-            setCredential(MOCK_CREDENTIAL);
+            fetchCredential();
             setShowForm(false);
           }}
           onCancel={credential ? () => setShowForm(false) : undefined}
@@ -151,22 +195,32 @@ function CredentialForm({
         setKeyId(match[1]);
         setKeyIdFromFile(true);
       }
-
-      if (issuerId.trim() && (match || keyId.trim())) {
-        setTestStatus("testing");
-        setTimeout(() => setTestStatus("ok"), 800);
-      }
     });
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      toast.success("Credentials saved and verified");
-      onSuccess();
-    }, 600);
+
+    try {
+      const res = await fetch("/api/settings/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issuerId, keyId, privateKey }),
+      });
+
+      if (res.ok) {
+        toast.success("Credentials saved");
+        onSuccess();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to save credentials");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+
+    setSaving(false);
   }
 
   const canSave =
@@ -213,7 +267,13 @@ function CredentialForm({
             {testStatus === "ok" && (
               <p className="flex items-center gap-1.5 text-xs text-green-600">
                 <CheckCircle size={14} weight="fill" />
-                Connected {keyIdFromFile && (<>&ndash; key ID <span className="font-mono">{keyId}</span></>)}
+                Connected{" "}
+                {keyIdFromFile && (
+                  <>
+                    &ndash; key ID{" "}
+                    <span className="font-mono">{keyId}</span>
+                  </>
+                )}
               </p>
             )}
             {testStatus === "error" && (
@@ -249,7 +309,7 @@ function CredentialForm({
           {saving ? (
             <>
               <SpinnerGap size={16} className="animate-spin" />
-              Validating...
+              Saving...
             </>
           ) : (
             "Save and verify"
