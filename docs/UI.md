@@ -89,13 +89,13 @@ The dashboard layout (`src/app/dashboard/layout.tsx`) wraps all page content in:
 
 ```tsx
 <div className="flex flex-1 flex-col gap-4 pt-6 pb-8">
-  <div className="mx-auto w-full max-w-4xl">
+  <div className="mx-auto w-full max-w-5xl px-6">
     {children}
   </div>
 </div>
 ```
 
-**Content is capped at `max-w-4xl` (56rem / 896px) and centred.** No horizontal padding on the outer wrapper – the max-width handles it. Pages must not override this width – it is set once in the layout.
+**Content is capped at `max-w-5xl` (64rem / 1024px) and centred** with `px-6` so narrow viewports still get side padding. Pages must not override this width – it is set once in the layout.
 
 ### Page root patterns
 
@@ -108,28 +108,21 @@ Standard content pages use a simple container:
 </div>
 ```
 
-Pages with a sticky bottom bar use a flex column:
-
-```tsx
-<div className="flex flex-1 flex-col">
-  <div className="flex-1 space-y-6">
-    {/* scrollable content – no px here, layout handles it */}
-  </div>
-  <div className="sticky bottom-0 flex items-center justify-end border-t bg-background py-3">
-    {/* actions – no px here, layout handles it */}
-  </div>
-</div>
-```
-
 ### Sidebar
 
 - Follows the shadcn sidebar-07 pattern (app switcher, grouped nav, footer)
 - Nav groups: Release, Testing, Insights, Configure
-- Version bar appears in page content header for version-scoped pages, not in the sidebar
 
-### Version bar
+### Header version picker
 
-Version-scoped pages (store listing, screenshots, app review) show a `<VersionBar>` as their first element with platform/version selectors and status badge.
+Version-scoped pages (store listing, screenshots, app review) show a `<HeaderVersionPicker>` in the dashboard header bar, after the breadcrumbs with a vertical separator. It renders:
+
+- Platform select + version select (compact, `h-7 text-xs`)
+- State indicator (coloured dot + label, hidden on mobile)
+- "New version" button (outline) – also shown on the overview page
+- "Save" button (primary, rightmost) – only on editable versions
+
+The selected version is stored in the URL via `?version=` search param. Pages read it with `resolveVersion(appId, searchParams.get("version"))` from `mock-data.ts` instead of local state. When the header picker changes the version, the URL updates and the page re-renders.
 
 ## Colours
 

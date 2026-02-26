@@ -22,7 +22,7 @@ export default function DashboardLayout({
           </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 pt-6 pb-8">
-          <div className="mx-auto w-full max-w-4xl">
+          <div className="mx-auto w-full max-w-5xl px-6">
             {children}
           </div>
         </div>
