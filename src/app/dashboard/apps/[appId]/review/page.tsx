@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { VersionBar } from "@/components/layout/version-bar";
@@ -56,7 +56,7 @@ export default function AppReviewPage() {
       </section>
 
       {/* Demo account */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">Demo account</h3>
         <p className="text-sm text-muted-foreground">
           If your app requires sign-in, provide credentials for the review team.
@@ -78,7 +78,7 @@ export default function AppReviewPage() {
       </section>
 
       {/* Contact information */}
-      <section className="space-y-4">
+      <section className="space-y-2 pb-8">
         <h3 className="section-title">Contact details</h3>
         <p className="text-sm text-muted-foreground">
           How the App Review team can reach you if they have questions.
@@ -102,57 +102,6 @@ export default function AppReviewPage() {
           </div>
         </div>
       </section>
-
-      {/* Submission history */}
-      <section className="space-y-4 pb-8">
-        <h3 className="section-title">Submission history</h3>
-        <Card>
-          <CardContent className="p-0">
-            <div className="divide-y">
-              <SubmissionRow
-                date="25 Feb 2026, 17:57"
-                version="2.1.0"
-                platform="macOS"
-                status="Waiting for review"
-                statusColor="text-amber-600"
-              />
-              <SubmissionRow
-                date="17 Feb 2026, 12:33"
-                version="2.0.0"
-                platform="macOS"
-                status="Review completed"
-                statusColor="text-green-600"
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-    </div>
-  );
-}
-
-function SubmissionRow({
-  date,
-  version,
-  platform,
-  status,
-  statusColor,
-}: {
-  date: string;
-  version: string;
-  platform: string;
-  status: string;
-  statusColor: string;
-}) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <div className="flex items-center gap-4">
-        <span className="text-sm text-muted-foreground">{date}</span>
-        <span className="font-mono text-sm">
-          {platform} {version}
-        </span>
-      </div>
-      <span className={`text-sm font-medium ${statusColor}`}>{status}</span>
     </div>
   );
 }

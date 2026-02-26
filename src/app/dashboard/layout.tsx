@@ -19,7 +19,7 @@ export default function DashboardLayout({
             <DashboardBreadcrumb />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 px-8 pt-6 pb-8">
+        <div className="flex flex-1 flex-col gap-4 pt-6 pb-8">
           <div className="mx-auto w-full max-w-4xl">
             {children}
           </div>

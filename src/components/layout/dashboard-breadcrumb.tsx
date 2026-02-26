@@ -19,9 +19,6 @@ const PAGE_TITLES: Record<string, string> = {
   reviews: "Reviews",
   analytics: "Analytics",
   details: "App details",
-  pricing: "Pricing",
-  iap: "In-app purchases",
-  privacy: "Privacy",
 };
 
 export function DashboardBreadcrumb() {

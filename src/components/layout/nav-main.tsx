@@ -11,9 +11,6 @@ import {
   ChatsCircle,
   ChartLineUp,
   Info,
-  CurrencyDollar,
-  Package,
-  ShieldCheck,
 } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 import {
@@ -50,12 +47,6 @@ function getNavGroups(appId: string): NavGroup[] {
       ],
     },
     {
-      label: "Testing",
-      items: [
-        { title: "TestFlight", href: `${base}/testflight`, icon: PaperPlaneTilt },
-      ],
-    },
-    {
       label: "Insights",
       items: [
         { title: "Reviews", href: `${base}/reviews`, icon: ChatsCircle },
@@ -63,11 +54,9 @@ function getNavGroups(appId: string): NavGroup[] {
       ],
     },
     {
-      label: "Configure",
+      label: "Testing",
       items: [
-        { title: "Pricing", href: `${base}/pricing`, icon: CurrencyDollar },
-        { title: "In-app purchases", href: `${base}/iap`, icon: Package },
-        { title: "Privacy", href: `${base}/privacy`, icon: ShieldCheck },
+        { title: "TestFlight", href: `${base}/testflight`, icon: PaperPlaneTilt },
       ],
     },
   ];

@@ -27,7 +27,7 @@ export default function AppDetailsPage() {
   return (
     <div className="space-y-8">
       {/* Identifiers (read-only) */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">Identifiers</h3>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ReadOnlyField label="Bundle ID" value={app.bundleId} mono />
@@ -37,7 +37,7 @@ export default function AppDetailsPage() {
       </section>
 
       {/* Categories */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">Categories</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -76,7 +76,7 @@ export default function AppDetailsPage() {
       </section>
 
       {/* Copyright */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">Copyright</h3>
         <Input
           defaultValue="2026 Nick Ustinov"
@@ -85,7 +85,7 @@ export default function AppDetailsPage() {
       </section>
 
       {/* Age rating */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">Age rating</h3>
         <div className="flex gap-4">
           <Card className="w-32">
@@ -100,7 +100,7 @@ export default function AppDetailsPage() {
       </section>
 
       {/* URLs */}
-      <section className="space-y-4">
+      <section className="space-y-2">
         <h3 className="section-title">URLs</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -137,7 +137,7 @@ export default function AppDetailsPage() {
       </section>
 
       {/* Content rights */}
-      <section className="space-y-4 pb-8">
+      <section className="space-y-2 pb-8">
         <h3 className="section-title">Content rights</h3>
         <p className="text-sm text-muted-foreground">
           Does not use third-party content.
