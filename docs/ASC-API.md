@@ -1,0 +1,275 @@
+# App Store Connect API reference
+
+How Itsyship fetches and uses ASC API data. Based on real API exploration (see `scripts/explore-app-data.ts`).
+
+Base URL: `https://api.appstoreconnect.apple.com`
+
+## Authentication
+
+JWT signed with ES256 private key. Token fields: `iss` (issuer ID), `aud` ("appstoreconnect-v1"), `kid` (key ID), 20-minute expiry. See `src/lib/asc/client.ts`.
+
+## Endpoints by page
+
+### Apps list
+
+```
+GET /v1/apps
+  fields[apps] = name,bundleId,sku,primaryLocale
+```
+
+Returns: `{ id, attributes: { name, bundleId, sku, primaryLocale } }`
+
+App icons are fetched from the public iTunes API (no auth needed):
+```
+GET https://itunes.apple.com/lookup?id={appleId}&country=us
+```
+Returns `artworkUrl512` in results.
+
+### Overview page
+
+```
+GET /v1/apps/{appId}/appStoreVersions
+  fields[appStoreVersions] = versionString,appVersionState,appStoreState,platform,copyright,
+                              releaseType,earliestReleaseDate,downloadable,createdDate,reviewType
+  include = build,appStoreVersionSubmission,appStoreReviewDetail
+  fields[builds] = version,uploadedDate,processingState,minOsVersion,iconAssetToken
+  fields[appStoreReviewDetails] = contactEmail,contactFirstName,contactLastName,contactPhone,
+                                   demoAccountName,demoAccountPassword,demoAccountRequired,notes
+```
+
+Version attributes:
+| Field | Example |
+|---|---|
+| `platform` | `MAC_OS`, `IOS` |
+| `versionString` | `"2.1.0"` |
+| `appStoreState` | `WAITING_FOR_REVIEW`, `READY_FOR_SALE`, `PREPARE_FOR_SUBMISSION`, `REJECTED` |
+| `appVersionState` | `WAITING_FOR_REVIEW`, `READY_FOR_DISTRIBUTION` |
+| `releaseType` | `MANUAL`, `AFTER_APPROVAL` |
+| `createdDate` | ISO 8601 |
+
+### Store listing (localizations)
+
+```
+GET /v1/appStoreVersions/{versionId}/appStoreVersionLocalizations
+  fields[appStoreVersionLocalizations] = locale,description,keywords,marketingUrl,
+                                          promotionalText,supportUrl,whatsNew
+```
+
+Localization attributes:
+| Field | Notes |
+|---|---|
+| `locale` | `en-US`, `es-ES`, `fr-FR`, etc. |
+| `description` | Full App Store description |
+| `whatsNew` | Release notes |
+| `keywords` | Comma-separated string |
+| `marketingUrl` | URL or null |
+| `promotionalText` | Editable anytime, null if not set |
+| `supportUrl` | URL |
+
+### Screenshots
+
+```
+GET /v1/appStoreVersionLocalizations/{localizationId}/appScreenshotSets
+  include = appScreenshots
+  fields[appScreenshotSets] = screenshotDisplayType
+  fields[appScreenshots] = fileSize,fileName,sourceFileChecksum,assetDeliveryState,assetToken
+```
+
+Screenshot set attributes:
+- `screenshotDisplayType` – `APP_DESKTOP`, `APP_IPHONE_67`, `APP_IPAD_PRO_3GEN_129`, etc.
+
+Screenshot attributes:
+- `fileName`, `fileSize`, `sourceFileChecksum` (MD5)
+- `assetToken` – path-like token (e.g. `PurpleSource211/v4/.../1.png`)
+- `assetDeliveryState.state` – `COMPLETE`, `UPLOAD_COMPLETE`, `FAILED`
+
+### App previews
+
+```
+GET /v1/appStoreVersionLocalizations/{localizationId}/appPreviewSets
+  include = appPreviews
+  fields[appPreviewSets] = previewType
+  fields[appPreviews] = fileSize,fileName,previewFrameTimeCode,mimeType,videoUrl,
+                         assetDeliveryState,sourceFileChecksum,previewImage
+```
+
+### App details
+
+```
+GET /v1/apps/{appId}/appInfos
+  include = primaryCategory,secondaryCategory,ageRatingDeclaration
+  fields[appInfos] = appStoreState,appStoreAgeRating,brazilAgeRating,brazilAgeRatingV2,kidsAgeBand,state
+  fields[appCategories] = platforms,parent
+```
+
+App info attributes:
+- `appStoreAgeRating` – `FOUR_PLUS`, `NINE_PLUS`, `TWELVE_PLUS`, `SEVENTEEN_PLUS`
+- Includes `ageRatingDeclarations` with boolean/enum fields for content descriptors
+
+```
+GET /v1/appInfos/{appInfoId}/appInfoLocalizations
+  fields[appInfoLocalizations] = locale,name,subtitle,privacyPolicyText,privacyPolicyUrl,privacyChoicesUrl
+```
+
+### App review
+
+```
+GET /v1/appStoreVersions/{versionId}/appStoreReviewDetail
+```
+
+Returns: `contactFirstName`, `contactLastName`, `contactPhone`, `contactEmail`, `demoAccountName`, `demoAccountPassword`, `demoAccountRequired`, `notes`
+
+Has a `relationships.appStoreReviewAttachments` link for file attachments.
+
+### Builds (TestFlight)
+
+```
+GET /v1/builds
+  filter[app] = {appId}
+  sort = -uploadedDate
+  fields[builds] = version,uploadedDate,processingState,minOsVersion,usesNonExemptEncryption,
+                    expirationDate,expired,iconAssetToken,buildAudienceType,computedMinMacOsVersion
+  include = preReleaseVersion,buildBetaDetail,betaBuildLocalizations,icons
+  fields[preReleaseVersions] = version,platform
+  fields[buildBetaDetails] = autoNotifyEnabled,internalBuildState,externalBuildState
+  fields[betaBuildLocalizations] = locale,whatsNew
+  fields[buildIcons] = iconAsset,iconType
+```
+
+Build attributes:
+| Field | Example |
+|---|---|
+| `version` | `"238"` (build number, string) |
+| `uploadedDate` | ISO 8601 |
+| `expirationDate` | ISO 8601 (90 days after upload) |
+| `expired` | boolean |
+| `processingState` | `VALID`, `PROCESSING`, `FAILED`, `INVALID` |
+| `buildAudienceType` | `APP_STORE_ELIGIBLE` |
+| `minOsVersion` | `"14.0"` |
+| `iconAssetToken.templateUrl` | Template with `{w}x{h}bb.{f}` placeholders |
+
+Included per build:
+- **`preReleaseVersions`** – `{ version: "2.1.0", platform: "MAC_OS" }` – maps build to app version
+- **`buildBetaDetails`** – `{ autoNotifyEnabled, internalBuildState, externalBuildState }`
+  - States: `PROCESSING`, `READY_FOR_BETA_TESTING`, `IN_BETA_TESTING`, `READY_FOR_BETA_SUBMISSION`, `IN_BETA_REVIEW`, `EXPIRED`, `MISSING_EXPORT_COMPLIANCE`
+- **`betaBuildLocalizations`** – `{ whatsNew, locale }` – TestFlight "what to test" notes
+- **`buildIcons`** – two per build (APP_STORE icon type), each with `iconAsset.templateUrl`
+
+Per-build relationships:
+```
+GET /v1/builds/{buildId}/individualTesters
+  fields[betaTesters] = firstName,lastName,email,state
+```
+
+**Note:** `GET /v1/builds/{buildId}/betaGroups` returns empty – groups must be queried via `/v1/betaGroups` and cross-referenced.
+
+### Beta groups (TestFlight)
+
+```
+GET /v1/betaGroups
+  filter[app] = {appId}
+  fields[betaGroups] = name,isInternalGroup,publicLinkEnabled,publicLinkId,publicLink,
+                        publicLinkLimit,publicLinkLimitEnabled,feedbackEnabled,
+                        hasAccessToAllBuilds,iosBuildsAvailableForAppleSiliconMac,createdDate
+```
+
+Beta group attributes:
+| Field | Notes |
+|---|---|
+| `name` | `"Internal"`, `"External"`, etc. |
+| `isInternalGroup` | boolean |
+| `publicLink` | Full TestFlight URL or null |
+| `publicLinkEnabled` | boolean or null (internal groups) |
+| `hasAccessToAllBuilds` | true for internal, null for external |
+| `feedbackEnabled` | boolean |
+| `createdDate` | ISO 8601 |
+
+Testers per group:
+```
+GET /v1/betaGroups/{groupId}/betaTesters
+  fields[betaTesters] = firstName,lastName,email,inviteType,state
+```
+
+Tester attributes:
+- `firstName` – `"Anonymous"` for public link testers
+- `email` – null for public link testers
+- `inviteType` – `PUBLIC_LINK` or `EMAIL`
+- `state` – `INSTALLED`, `ACCEPTED`, `NOT_INVITED`, `REVOKED`
+
+### Beta app info (TestFlight)
+
+```
+GET /v1/betaAppLocalizations
+  filter[app] = {appId}
+  fields[betaAppLocalizations] = description,feedbackEmail,locale,marketingUrl,
+                                  privacyPolicyUrl,tvOsPrivacyPolicy
+```
+
+```
+GET /v1/betaAppReviewDetails
+  filter[app] = {appId}
+  fields[betaAppReviewDetails] = contactEmail,contactFirstName,contactLastName,contactPhone,
+                                  demoAccountName,demoAccountPassword,demoAccountRequired,notes
+```
+
+### Customer reviews
+
+```
+GET /v1/apps/{appId}/customerReviews
+  sort = -createdDate
+  fields[customerReviews] = rating,title,body,reviewerNickname,createdDate,territory
+  include = response
+  fields[customerReviewResponses] = responseBody,lastModifiedDate,state
+```
+
+Review attributes:
+| Field | Example |
+|---|---|
+| `rating` | 1–5 |
+| `title` | String |
+| `body` | String |
+| `reviewerNickname` | String |
+| `createdDate` | ISO 8601 |
+| `territory` | `"USA"`, `"NLD"`, `"FRA"` (ISO 3166-1 alpha-3) |
+
+### In-app purchases
+
+```
+GET /v1/apps/{appId}/inAppPurchasesV2
+  fields[inAppPurchases] = name,productId,inAppPurchaseType,state,reviewNote,
+                            familySharable,contentHosting
+```
+
+IAP attributes:
+- `inAppPurchaseType` – `NON_CONSUMABLE`, `CONSUMABLE`, `NON_RENEWING_SUBSCRIPTION`
+- `state` – `APPROVED`, `WAITING_FOR_REVIEW`, `DEVELOPER_ACTION_NEEDED`, etc.
+
+### Subscription groups
+
+```
+GET /v1/apps/{appId}/subscriptionGroups
+  include = subscriptions
+  fields[subscriptionGroups] = referenceName
+  fields[subscriptions] = name,productId,familySharable,state,subscriptionPeriod,reviewNote,groupLevel
+```
+
+## Icon template URLs
+
+Build and app icons use template URLs with placeholders:
+```
+https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/.../AppIcon.icns/{w}x{h}bb.{f}
+```
+
+Replace `{w}` and `{h}` with pixel dimensions, `{f}` with format (`png`, `jpg`, `webp`). Example:
+```
+.../AppIcon.icns/64x64bb.png
+```
+
+## Known API quirks
+
+1. **`sort` not allowed on `/appStoreVersions`** – versions come in creation order, newest first
+2. **`betaGroups` relationship on builds is write-only** – `GET /v1/builds/{id}/betaGroups` returns empty; query groups via `/v1/betaGroups` instead
+3. **Age rating fields** – don't specify `fields[ageRatingDeclarations]`; let the API return defaults. Some documented fields like `gamblingAndContests`, `seventeenPlus` are rejected
+4. **`appStoreVersionSubmissions`** – has no queryable fields; include it only for relationship presence detection
+5. **Public link testers** – `firstName` is `"Anonymous"`, `email` is null, `inviteType` is `"PUBLIC_LINK"`
+6. **Build expiry** – 90 days from upload. `expired: true` + `expirationDate` in the past means the build is no longer installable
