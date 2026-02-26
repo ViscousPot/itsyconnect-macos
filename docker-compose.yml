@@ -6,8 +6,6 @@ services:
     volumes:
       - app_data:/data
     environment:
-      AUTH_USERNAME: admin
-      AUTH_PASSWORD_HASH: "${AUTH_PASSWORD_HASH}"
       SESSION_SECRET: "${SESSION_SECRET}"
       ENCRYPTION_MASTER_KEY: "${ENCRYPTION_MASTER_KEY}"
       # Optional: set for AI features

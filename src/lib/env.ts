@@ -15,13 +15,6 @@ const envSchema = z.object({
 
   DATABASE_PATH: z.string().optional(),
 
-  AUTH_EMAIL: z.string().email().optional(),
-
-  AUTH_PASSWORD: z
-    .string()
-    .min(8, "AUTH_PASSWORD must be at least 8 characters")
-    .optional(),
-
   PORT: z.coerce
     .number({ message: "PORT must be a number" })
     .int()

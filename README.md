@@ -75,8 +75,6 @@ On first run, `ENCRYPTION_MASTER_KEY` and `SESSION_SECRET` are auto-generated an
 | `ENCRYPTION_MASTER_KEY` | Yes* | 64-char hex string for envelope encryption |
 | `SESSION_SECRET` | Yes* | 32+ char string for session cookies |
 | `DATABASE_PATH` | No | SQLite path (default: `./data/itsyship.db`) |
-| `AUTH_EMAIL` | No | Pre-seed admin email (skips onboarding) |
-| `AUTH_PASSWORD` | No | Pre-seed admin password (skips onboarding) |
 | `PORT` | No | Server port (default: `3000`) |
 
 *Auto-generated on first run if not set.

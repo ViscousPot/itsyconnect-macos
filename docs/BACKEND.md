@@ -130,8 +130,6 @@ Validated at startup with Zod. App refuses to start if required vars are missing
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `AUTH_EMAIL` | No | Pre-seed admin email (skips onboarding step) |
-| `AUTH_PASSWORD` | No | Pre-seed admin password (skips onboarding step) |
 | `ENCRYPTION_MASTER_KEY` | Yes | 32-byte hex key for envelope encryption |
 | `SESSION_SECRET` | Yes | 32+ char secret for iron-session |
 | `PORT` | No | Server port (default 3000) |

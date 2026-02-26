@@ -16,13 +16,6 @@ const envSchema = z.object({
 
   DATABASE_PATH: z.string().optional(),
 
-  AUTH_EMAIL: z.string().email().optional(),
-
-  AUTH_PASSWORD: z
-    .string()
-    .min(8, "AUTH_PASSWORD must be at least 8 characters")
-    .optional(),
-
   PORT: z.coerce
     .number({ message: "PORT must be a number" })
     .int()
@@ -51,15 +44,11 @@ describe("env validation", () => {
     const result = envSchema.safeParse({
       ...validEnv,
       DATABASE_PATH: "/data/itsyship.db",
-      AUTH_EMAIL: "admin@example.com",
-      AUTH_PASSWORD: "strong-password",
       PORT: "8080",
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.DATABASE_PATH).toBe("/data/itsyship.db");
-      expect(result.data.AUTH_EMAIL).toBe("admin@example.com");
-      expect(result.data.AUTH_PASSWORD).toBe("strong-password");
       expect(result.data.PORT).toBe(8080);
     }
   });
@@ -102,22 +91,6 @@ describe("env validation", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects invalid AUTH_EMAIL", () => {
-    const result = envSchema.safeParse({
-      ...validEnv,
-      AUTH_EMAIL: "not-an-email",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects AUTH_PASSWORD shorter than 8 chars", () => {
-    const result = envSchema.safeParse({
-      ...validEnv,
-      AUTH_PASSWORD: "short",
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("rejects non-numeric PORT", () => {
     const result = envSchema.safeParse({
       ...validEnv,
@@ -147,8 +120,6 @@ describe("env validation", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.DATABASE_PATH).toBeUndefined();
-      expect(result.data.AUTH_EMAIL).toBeUndefined();
-      expect(result.data.AUTH_PASSWORD).toBeUndefined();
     }
   });
 });
