@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Images,
   CloudArrowUp,
@@ -148,6 +148,7 @@ function UploadingPlaceholder() {
 export default function ScreenshotsPage() {
   const { appId } = useParams<{ appId: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { apps } = useApps();
   const app = apps.find((a) => a.id === appId);
   const { versions, loading: versionsLoading } = useVersions();
@@ -169,7 +170,19 @@ export default function ScreenshotsPage() {
   const primaryLocale = app?.primaryLocale ?? "";
 
   const [locales, setLocales] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState("");
+  const [selectedLocale, setSelectedLocale] = useState(
+    () => searchParams.get("locale") ?? "",
+  );
+
+  const changeLocale = useCallback(
+    (code: string) => {
+      setSelectedLocale(code);
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("locale", code);
+      router.replace(`?${next.toString()}`, { scroll: false });
+    },
+    [searchParams, router],
+  );
 
   const { reportLocales, otherSectionLocales } = useSectionLocales("screenshots");
 
@@ -183,8 +196,12 @@ export default function ScreenshotsPage() {
   useEffect(() => {
     if (!primaryLocale) return;
     setLocales((prev) => (prev.length > 0 ? prev : [primaryLocale]));
-    setSelectedLocale((prev) => prev || primaryLocale);
-  }, [primaryLocale]);
+    setSelectedLocale((prev) => {
+      if (prev) return prev;
+      const fromUrl = searchParams.get("locale");
+      return fromUrl || primaryLocale;
+    });
+  }, [primaryLocale, searchParams]);
 
   // Report locales to cross-section context
   useEffect(() => {
@@ -315,7 +332,7 @@ export default function ScreenshotsPage() {
 
   function handleAddLocale(locale: string) {
     setLocales((prev) => sortLocales([...prev, locale], primaryLocale));
-    setSelectedLocale(locale);
+    changeLocale(locale);
     toast.success(`Added ${localeName(locale)}`);
   }
 
@@ -331,7 +348,7 @@ export default function ScreenshotsPage() {
     setLocales((prev) => {
       const next = prev.filter((l) => l !== code);
       if (selectedLocale === code) {
-        setSelectedLocale(next[0] ?? "");
+        changeLocale(next[0] ?? "");
       }
       return next;
     });
@@ -350,7 +367,7 @@ export default function ScreenshotsPage() {
     locales,
     selectedLocale,
     primaryLocale,
-    onLocaleChange: setSelectedLocale,
+    onLocaleChange: changeLocale,
     onLocaleAdd: handleAddLocale,
     onLocalesAdd: handleBulkAddLocales,
     onLocaleDelete: handleDeleteLocale,

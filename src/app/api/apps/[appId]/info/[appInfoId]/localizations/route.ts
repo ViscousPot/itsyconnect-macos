@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { listAppInfoLocalizations } from "@/lib/asc/app-info";
 import { hasCredentials } from "@/lib/asc/client";
 import { cacheGetMeta } from "@/lib/cache";
+import {
+  updateAppInfoLocalization,
+  createAppInfoLocalization,
+  deleteAppInfoLocalization,
+  invalidateAppInfoLocalizationsCache,
+} from "@/lib/asc/localization-mutations";
 
 
 export async function GET(
@@ -22,5 +28,68 @@ export async function GET(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ appId: string; appInfoId: string }> },
+) {
+  const { appInfoId } = await params;
+
+  if (!hasCredentials()) {
+    return NextResponse.json({ error: "No credentials" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json() as {
+      locales: Record<string, Record<string, unknown>>;
+      originalLocaleIds: Record<string, string>;
+    };
+
+    const { locales, originalLocaleIds } = body;
+    const errors: string[] = [];
+
+    const updates: Promise<void>[] = [];
+
+    for (const [locale, fields] of Object.entries(locales)) {
+      const existingId = originalLocaleIds[locale];
+      if (existingId) {
+        updates.push(
+          updateAppInfoLocalization(existingId, fields).catch((err) => {
+            errors.push(`Update ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      } else {
+        updates.push(
+          createAppInfoLocalization(appInfoId, locale, fields).catch((err) => {
+            errors.push(`Create ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      }
+    }
+
+    for (const [locale, locId] of Object.entries(originalLocaleIds)) {
+      if (!locales[locale]) {
+        updates.push(
+          deleteAppInfoLocalization(locId).catch((err) => {
+            errors.push(`Delete ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      }
+    }
+
+    await Promise.allSettled(updates);
+
+    invalidateAppInfoLocalizationsCache(appInfoId);
+
+    if (errors.length > 0) {
+      return NextResponse.json({ ok: false, errors }, { status: 207 });
+    }
+
+    return NextResponse.json({ ok: true, errors: [] });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

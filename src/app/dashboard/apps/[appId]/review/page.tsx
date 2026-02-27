@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SpinnerGap } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import { useApps } from "@/lib/apps-context";
 import { useVersions } from "@/lib/versions-context";
 import { useFormDirty } from "@/lib/form-dirty-context";
@@ -18,7 +19,7 @@ export default function AppReviewPage() {
   const searchParams = useSearchParams();
   const { apps } = useApps();
   const app = apps.find((a) => a.id === appId);
-  const { versions, loading: versionsLoading } = useVersions();
+  const { versions, loading: versionsLoading, refresh: refreshVersions } = useVersions();
 
   const selectedVersion = useMemo(
     () => resolveVersion(versions, searchParams.get("version")),
@@ -27,7 +28,7 @@ export default function AppReviewPage() {
 
   const reviewDetail = selectedVersion?.reviewDetail?.attributes;
 
-  const { setDirty } = useFormDirty();
+  const { setDirty, registerSave } = useFormDirty();
   const [notes, setNotes] = useState("");
   const [signInRequired, setSignInRequired] = useState(false);
   const [demoName, setDemoName] = useState("");
@@ -60,6 +61,45 @@ export default function AppReviewPage() {
     }
     setDirty(false);
   }, [reviewDetail, setDirty]);
+
+  // Register save handler for the header Save button
+  useEffect(() => {
+    registerSave(async () => {
+      const res = await fetch(
+        `/api/apps/${appId}/versions/${selectedVersion?.id}/review`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reviewDetailId: selectedVersion?.reviewDetail?.id ?? null,
+            attributes: {
+              notes,
+              demoAccountRequired: signInRequired,
+              demoAccountName: demoName,
+              demoAccountPassword: demoPassword,
+              contactFirstName: firstName,
+              contactLastName: lastName,
+              contactPhone: phone,
+              contactEmail: email,
+            },
+          }),
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error ?? "Save failed");
+        return;
+      }
+
+      toast.success("Review info saved");
+      await refreshVersions();
+    });
+  }, [
+    appId, selectedVersion, notes, signInRequired, demoName, demoPassword,
+    firstName, lastName, phone, email, registerSave, refreshVersions,
+  ]);
 
   if (!app) {
     return (

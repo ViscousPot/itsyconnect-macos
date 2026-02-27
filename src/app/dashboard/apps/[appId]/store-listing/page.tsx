@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,7 @@ function buildLocaleData(
 export default function StoreListingPage() {
   const { appId } = useParams<{ appId: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { apps } = useApps();
   const app = apps.find((a) => a.id === appId);
   const { versions, loading: versionsLoading } = useVersions();
@@ -80,19 +81,34 @@ export default function StoreListingPage() {
     ? !EDITABLE_STATES.has(selectedVersion.attributes.appVersionState)
     : false;
 
-  const { localizations, loading: locLoading } = useLocalizations(appId, versionId);
+  const { localizations, loading: locLoading, refresh: refreshLocalizations } = useLocalizations(appId, versionId);
 
   const primaryLocale = app?.primaryLocale ?? "";
 
   const [localeData, setLocaleData] = useState<Record<string, LocaleFields>>({});
   const [locales, setLocales] = useState<string[]>([]);
-  const [selectedLocale, setSelectedLocale] = useState("");
+  const [selectedLocale, setSelectedLocale] = useState(
+    () => searchParams.get("locale") ?? "",
+  );
 
   const current = localeData[selectedLocale] ?? emptyLocaleFields();
 
-  const { setDirty } = useFormDirty();
+  const changeLocale = useCallback(
+    (code: string) => {
+      setSelectedLocale(code);
+      const next = new URLSearchParams(searchParams.toString());
+      next.set("locale", code);
+      router.replace(`?${next.toString()}`, { scroll: false });
+    },
+    [searchParams, router],
+  );
+
+  const { setDirty, registerSave } = useFormDirty();
   const [releaseType, setReleaseType] = useState("manually");
   const [phasedRelease, setPhasedRelease] = useState(false);
+
+  // Track original locale → localization ID mapping for diffing saves
+  const originalLocaleIdsRef = useRef<Record<string, string>>({});
 
   const { reportLocales, otherSectionLocales } = useSectionLocales("store-listing");
 
@@ -102,14 +118,60 @@ export default function StoreListingPage() {
     setLocaleData(data);
     const sorted = sortLocales(Object.keys(data), primaryLocale);
     setLocales(sorted);
-    setSelectedLocale(sorted[0] ?? "");
+
+    // Preserve current locale if still valid, else try URL param, else first
+    setSelectedLocale((prev) => {
+      if (prev && sorted.includes(prev)) return prev;
+      const fromUrl = searchParams.get("locale");
+      if (fromUrl && sorted.includes(fromUrl)) return fromUrl;
+      return sorted[0] ?? "";
+    });
     setDirty(false);
-  }, [localizations, primaryLocale, setDirty]);
+
+    // Snapshot original locale → ID mapping for save diffing
+    const ids: Record<string, string> = {};
+    for (const loc of localizations) {
+      ids[loc.attributes.locale] = loc.id;
+    }
+    originalLocaleIdsRef.current = ids;
+  }, [localizations, primaryLocale, setDirty, searchParams]);
 
   // Report locales to cross-section context
   useEffect(() => {
     reportLocales(locales);
   }, [locales, reportLocales]);
+
+  // Register save handler for the header Save button
+  useEffect(() => {
+    registerSave(async () => {
+      const res = await fetch(
+        `/api/apps/${appId}/versions/${versionId}/localizations`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locales: localeData,
+            originalLocaleIds: originalLocaleIdsRef.current,
+          }),
+        },
+      );
+
+      const data = await res.json();
+
+      if (!res.ok && !data.errors) {
+        toast.error(data.error ?? "Save failed");
+        return;
+      }
+
+      if (data.errors?.length > 0) {
+        toast.warning(`Saved with ${data.errors.length} error(s)`);
+      } else {
+        toast.success("Store listing saved");
+      }
+
+      await refreshLocalizations();
+    });
+  }, [appId, versionId, localeData, registerSave, refreshLocalizations]);
 
   const updateField = useCallback(
     (field: keyof LocaleFields, value: string) => {
@@ -128,7 +190,7 @@ export default function StoreListingPage() {
       setLocales(sortLocales(Object.keys(next), primaryLocale));
       return next;
     });
-    setSelectedLocale(locale);
+    changeLocale(locale);
     setDirty(true);
     toast.success(`Added ${localeName(locale)}`);
   }
@@ -154,7 +216,7 @@ export default function StoreListingPage() {
       const sorted = sortLocales(Object.keys(next), primaryLocale);
       setLocales(sorted);
       if (selectedLocale === code) {
-        setSelectedLocale(sorted[0] ?? "");
+        changeLocale(sorted[0] ?? "");
       }
       return next;
     });
@@ -179,7 +241,7 @@ export default function StoreListingPage() {
     locales,
     selectedLocale,
     primaryLocale,
-    onLocaleChange: setSelectedLocale,
+    onLocaleChange: changeLocale,
     onLocaleAdd: handleAddLocale,
     onLocalesAdd: handleBulkAddLocales,
     onLocaleDelete: handleDeleteLocale,

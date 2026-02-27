@@ -7,7 +7,7 @@ import {
   useSearchParams,
   useRouter,
 } from "next/navigation";
-import { ArrowsClockwise, FloppyDisk, Plus } from "@phosphor-icons/react";
+import { ArrowsClockwise, FloppyDisk, Plus, SpinnerGap } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -139,7 +139,7 @@ export function HeaderVersionActions() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { versions } = useVersions();
-  const { isDirty, onSave } = useFormDirty();
+  const { isDirty, isSaving, onSave } = useFormDirty();
 
   if (!appId) return null;
 
@@ -178,11 +178,11 @@ export function HeaderVersionActions() {
         <Button
           size="sm"
           className="h-7 gap-1 text-xs"
-          disabled={!isDirty}
+          disabled={!isDirty || isSaving}
           onClick={onSave}
         >
-          <FloppyDisk size={12} />
-          Save
+          {isSaving ? <SpinnerGap size={12} className="animate-spin" /> : <FloppyDisk size={12} />}
+          {isSaving ? "Saving\u2026" : "Save"}
         </Button>
       )}
     </>

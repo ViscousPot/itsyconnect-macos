@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Gauge,
   Storefront,
@@ -70,10 +70,23 @@ function getNavGroups(appId: string): NavGroup[] {
   ];
 }
 
+/** Subset of search params that should persist across sidebar navigation. */
+const STICKY_PARAMS = ["version", "locale"];
+
 export function NavMain({ appId }: { appId: string }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const base = `/dashboard/apps/${appId}`;
   const groups = getNavGroups(appId);
+
+  // Build a query string from the params we want to keep
+  const sticky = new URLSearchParams();
+  for (const key of STICKY_PARAMS) {
+    const val = searchParams.get(key);
+    if (val) sticky.set(key, val);
+  }
+  const qs = sticky.toString();
+  const suffix = qs ? `?${qs}` : "";
 
   function isActive(href: string): boolean {
     // Exact match for root pages (Overview)
@@ -107,7 +120,7 @@ export function NavMain({ appId }: { appId: string }) {
                   tooltip={item.title}
                   isActive={isActive(item.href)}
                 >
-                  <Link href={item.href}>
+                  <Link href={`${item.href}${suffix}`}>
                     <item.icon size={16} />
                     <span>{item.title}</span>
                   </Link>

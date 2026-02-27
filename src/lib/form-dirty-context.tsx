@@ -10,6 +10,7 @@ import {
 
 interface FormDirtyContextValue {
   isDirty: boolean;
+  isSaving: boolean;
   setDirty: (dirty: boolean) => void;
   /** Pages register a save handler; the header button calls it. */
   onSave: () => void;
@@ -18,6 +19,7 @@ interface FormDirtyContextValue {
 
 const FormDirtyContext = createContext<FormDirtyContextValue>({
   isDirty: false,
+  isSaving: false,
   setDirty: () => {},
   onSave: () => {},
   registerSave: () => {},
@@ -25,6 +27,7 @@ const FormDirtyContext = createContext<FormDirtyContextValue>({
 
 export function FormDirtyProvider({ children }: { children: React.ReactNode }) {
   const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const saveRef = useRef<(() => void | Promise<void>) | null>(null);
 
   const setDirty = useCallback((dirty: boolean) => {
@@ -35,12 +38,18 @@ export function FormDirtyProvider({ children }: { children: React.ReactNode }) {
     saveRef.current = handler;
   }, []);
 
-  const onSave = useCallback(() => {
-    saveRef.current?.();
+  const onSave = useCallback(async () => {
+    if (!saveRef.current) return;
+    setIsSaving(true);
+    try {
+      await saveRef.current();
+    } finally {
+      setIsSaving(false);
+    }
   }, []);
 
   return (
-    <FormDirtyContext.Provider value={{ isDirty, setDirty, onSave, registerSave }}>
+    <FormDirtyContext.Provider value={{ isDirty, isSaving, setDirty, onSave, registerSave }}>
       {children}
     </FormDirtyContext.Provider>
   );
