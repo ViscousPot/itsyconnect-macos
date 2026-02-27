@@ -8,12 +8,11 @@ import {
   Storefront,
   Images,
   Stamp,
-  PaperPlaneTilt,
   ChatsCircle,
   ChartLineUp,
   CurrencyDollar,
   Info,
-  Package,
+  ShippingContainer,
   UsersThree,
   ChatDots,
 } from "@phosphor-icons/react";
@@ -62,7 +61,7 @@ function getNavGroups(appId: string): NavGroup[] {
     {
       label: "TestFlight",
       items: [
-        { title: "Builds", href: `${base}/testflight`, icon: Package },
+        { title: "Builds", href: `${base}/testflight`, icon: ShippingContainer },
         { title: "Groups", href: `${base}/testflight/groups`, icon: UsersThree },
         { title: "Info", href: `${base}/testflight/info`, icon: Info },
         { title: "Feedback", href: `${base}/testflight/feedback`, icon: ChatDots },
