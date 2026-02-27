@@ -29,6 +29,7 @@ export default function AppReviewPage() {
   );
 
   const reviewDetail = selectedVersion?.reviewDetail?.attributes;
+  const versionId = selectedVersion?.id ?? "";
 
   const { setDirty, registerSave, setValidationErrors } = useFormDirty();
   const [notes, setNotes] = useState("");
@@ -40,29 +41,20 @@ export default function AppReviewPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  // Pre-fill from review detail when version changes
-  useEffect(() => {
-    if (reviewDetail) {
-      setNotes(reviewDetail.notes ?? "");
-      setSignInRequired(reviewDetail.demoAccountRequired ?? false);
-      setDemoName(reviewDetail.demoAccountName ?? "");
-      setDemoPassword(reviewDetail.demoAccountPassword ?? "");
-      setFirstName(reviewDetail.contactFirstName ?? "");
-      setLastName(reviewDetail.contactLastName ?? "");
-      setPhone(reviewDetail.contactPhone ?? "");
-      setEmail(reviewDetail.contactEmail ?? "");
-    } else {
-      setNotes("");
-      setSignInRequired(false);
-      setDemoName("");
-      setDemoPassword("");
-      setFirstName("");
-      setLastName("");
-      setPhone("");
-      setEmail("");
-    }
+  // Reset form when version changes (during render, not in effect)
+  const [prevVersionId, setPrevVersionId] = useState(versionId);
+  if (versionId !== prevVersionId) {
+    setPrevVersionId(versionId);
+    setNotes(reviewDetail?.notes ?? "");
+    setSignInRequired(reviewDetail?.demoAccountRequired ?? false);
+    setDemoName(reviewDetail?.demoAccountName ?? "");
+    setDemoPassword(reviewDetail?.demoAccountPassword ?? "");
+    setFirstName(reviewDetail?.contactFirstName ?? "");
+    setLastName(reviewDetail?.contactLastName ?? "");
+    setPhone(reviewDetail?.contactPhone ?? "");
+    setEmail(reviewDetail?.contactEmail ?? "");
     setDirty(false);
-  }, [reviewDetail, setDirty]);
+  }
 
   // Validate field limits
   useEffect(() => {
@@ -158,7 +150,7 @@ export default function AppReviewPage() {
           <CardContent className="px-5 py-4">
             <Textarea
               placeholder="Provide any additional information the App Review team might need..."
-              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0"
+              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
               value={notes}
               onChange={(e) => { setNotes(e.target.value); setDirty(true); }}
             />

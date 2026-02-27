@@ -66,7 +66,7 @@ export default function TestFlightInfoPage() {
                 value={info.description}
                 onChange={(e) => updateInfoField("description", e.target.value)}
                 placeholder="Describe what testers should try..."
-                className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
+                className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
               />
             </CardContent>
             <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -157,7 +157,7 @@ export default function TestFlightInfoPage() {
                   value={review.reviewNotes}
                   onChange={(e) => updateReviewField("reviewNotes", e.target.value)}
                   placeholder="Notes for the App Review team..."
-                  className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
+                  className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
                 />
               </CardContent>
               <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -214,7 +214,7 @@ export default function TestFlightInfoPage() {
               value={licenseAgreement}
               onChange={(e) => setLicenseAgreement(e.target.value)}
               placeholder="Enter your license agreement text..."
-              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
+              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
             />
           </CardContent>
         </Card>

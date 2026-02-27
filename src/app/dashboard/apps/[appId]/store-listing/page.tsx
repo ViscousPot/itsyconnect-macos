@@ -111,31 +111,36 @@ export default function StoreListingPage() {
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [phasedRelease, setPhasedRelease] = useState(false);
 
-  // Initialize release settings from version data
-  useEffect(() => {
-    if (!selectedVersion) return;
-    const { releaseType: rt, earliestReleaseDate } = selectedVersion.attributes;
-    if (rt === "SCHEDULED" || (rt === "AFTER_APPROVAL" && earliestReleaseDate)) {
-      setReleaseType("after-date");
-      if (earliestReleaseDate) setScheduledDate(new Date(earliestReleaseDate));
-    } else if (rt === "AFTER_APPROVAL") {
-      setReleaseType("automatically");
-    } else {
-      setReleaseType("manually");
+  // Reset release settings when version changes (during render)
+  const [prevVersionId, setPrevVersionId] = useState(versionId);
+  if (versionId !== prevVersionId) {
+    setPrevVersionId(versionId);
+    if (selectedVersion) {
+      const { releaseType: rt, earliestReleaseDate } = selectedVersion.attributes;
+      if (rt === "SCHEDULED" || (rt === "AFTER_APPROVAL" && earliestReleaseDate)) {
+        setReleaseType("after-date");
+        if (earliestReleaseDate) setScheduledDate(new Date(earliestReleaseDate));
+        else setScheduledDate(undefined);
+      } else if (rt === "AFTER_APPROVAL") {
+        setReleaseType("automatically");
+        setScheduledDate(undefined);
+      } else {
+        setReleaseType("manually");
+        setScheduledDate(undefined);
+      }
+      setPhasedRelease(selectedVersion.phasedRelease != null);
     }
-    setPhasedRelease(selectedVersion.phasedRelease != null);
-  }, [selectedVersion]);
+  }
 
   // Track original locale → localization ID mapping for diffing saves
   const originalLocaleIdsRef = useRef<Record<string, string>>({});
 
   const { reportLocales, otherSectionLocales } = useSectionLocales("store-listing");
 
-  const searchParamsRef = useRef(searchParams);
-  searchParamsRef.current = searchParams;
-
-  // Reset locale data when localizations change
-  useEffect(() => {
+  // Reset locale data when localizations change (during render)
+  const [prevLocalizations, setPrevLocalizations] = useState(localizations);
+  if (localizations !== prevLocalizations) {
+    setPrevLocalizations(localizations);
     const data = buildLocaleData(localizations);
     setLocaleData(data);
     const sorted = sortLocales(Object.keys(data), primaryLocale);
@@ -144,19 +149,21 @@ export default function StoreListingPage() {
     // Preserve current locale if still valid, else try URL param, else first
     setSelectedLocale((prev) => {
       if (prev && sorted.includes(prev)) return prev;
-      const fromUrl = searchParamsRef.current.get("locale");
+      const fromUrl = searchParams.get("locale");
       if (fromUrl && sorted.includes(fromUrl)) return fromUrl;
       return sorted[0] ?? "";
     });
     setDirty(false);
+  }
 
-    // Snapshot original locale → ID mapping for save diffing
+  // Snapshot original locale → ID mapping for save diffing
+  useEffect(() => {
     const ids: Record<string, string> = {};
     for (const loc of localizations) {
       ids[loc.attributes.locale] = loc.id;
     }
     originalLocaleIdsRef.current = ids;
-  }, [localizations, primaryLocale, setDirty]);
+  }, [localizations]);
 
   // Report locales to cross-section context
   useEffect(() => {
@@ -196,6 +203,17 @@ export default function StoreListingPage() {
       const promises: Promise<void>[] = [];
       const allErrors: string[] = [];
 
+      // When the version is read-only (live), only promotional text is
+      // editable – send just that field to avoid ASC rejecting locked fields.
+      const locPayload = readOnly
+        ? Object.fromEntries(
+            Object.entries(localeData).map(([locale, fields]) => [
+              locale,
+              { promotionalText: fields.promotionalText },
+            ]),
+          )
+        : localeData;
+
       // Save localizations
       let locCreatedIds: Record<string, string> = {};
       promises.push(
@@ -203,7 +221,7 @@ export default function StoreListingPage() {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            locales: localeData,
+            locales: locPayload,
             originalLocaleIds: originalLocaleIdsRef.current,
           }),
         }).then(async (res) => {
@@ -216,34 +234,36 @@ export default function StoreListingPage() {
         }),
       );
 
-      // Save release settings
-      const ascReleaseType = releaseType === "manually"
-        ? "MANUAL"
-        : releaseType === "after-date"
-          ? "SCHEDULED"
-          : "AFTER_APPROVAL";
-      const earliestReleaseDate = releaseType === "after-date" && scheduledDate
-        ? scheduledDate.toISOString()
-        : null;
+      // Release settings are locked on live versions
+      if (!readOnly) {
+        const ascReleaseType = releaseType === "manually"
+          ? "MANUAL"
+          : releaseType === "after-date"
+            ? "SCHEDULED"
+            : "AFTER_APPROVAL";
+        const earliestReleaseDate = releaseType === "after-date" && scheduledDate
+          ? scheduledDate.toISOString()
+          : null;
 
-      promises.push(
-        fetch(`/api/apps/${appId}/versions/${versionId}/release`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            releaseType: ascReleaseType,
-            earliestReleaseDate,
-            phasedRelease,
-            phasedReleaseId: selectedVersion?.phasedRelease?.id ?? null,
+        promises.push(
+          fetch(`/api/apps/${appId}/versions/${versionId}/release`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              releaseType: ascReleaseType,
+              earliestReleaseDate,
+              phasedRelease,
+              phasedReleaseId: selectedVersion?.phasedRelease?.id ?? null,
+            }),
+          }).then(async (res) => {
+            const data = await res.json();
+            if (!res.ok && !data.errors) throw new Error(data.error ?? "Failed to save release settings");
+            if (data.errors?.length > 0) {
+              allErrors.push(...data.errors);
+            }
           }),
-        }).then(async (res) => {
-          const data = await res.json();
-          if (!res.ok && !data.errors) throw new Error(data.error ?? "Failed to save release settings");
-          if (data.errors?.length > 0) {
-            allErrors.push(...data.errors);
-          }
-        }),
-      );
+        );
+      }
 
       try {
         await Promise.all(promises);
@@ -255,7 +275,7 @@ export default function StoreListingPage() {
       if (allErrors.length > 0) {
         toast.warning(`Saved with ${allErrors.length} error(s)`);
       } else {
-        toast.success("Store listing saved");
+        toast.success(readOnly ? "Promotional text saved" : "Store listing saved");
       }
 
       // Update original snapshot with real IDs from created locales
@@ -269,7 +289,15 @@ export default function StoreListingPage() {
       originalLocaleIdsRef.current = ids;
 
       // Update cached version with release settings
-      if (selectedVersion) {
+      if (!readOnly && selectedVersion) {
+        const ascReleaseType = releaseType === "manually"
+          ? "MANUAL"
+          : releaseType === "after-date"
+            ? "SCHEDULED"
+            : "AFTER_APPROVAL";
+        const earliestReleaseDate = releaseType === "after-date" && scheduledDate
+          ? scheduledDate.toISOString()
+          : null;
         updateVersion(selectedVersion.id, (v) => ({
           ...v,
           attributes: {
@@ -285,18 +313,15 @@ export default function StoreListingPage() {
 
       setDirty(false);
     });
-  }, [appId, versionId, localeData, releaseType, scheduledDate, phasedRelease, selectedVersion, registerSave, setDirty, updateVersion]);
+  }, [appId, versionId, localeData, readOnly, releaseType, scheduledDate, phasedRelease, selectedVersion, registerSave, setDirty, updateVersion]);
 
-  const updateField = useCallback(
-    (field: keyof LocaleFields, value: string) => {
-      setLocaleData((prev) => ({
-        ...prev,
-        [selectedLocale]: { ...prev[selectedLocale], [field]: value },
-      }));
-      setDirty(true);
-    },
-    [selectedLocale, setDirty]
-  );
+  function updateField(field: keyof LocaleFields, value: string) {
+    setLocaleData((prev) => ({
+      ...prev,
+      [selectedLocale]: { ...prev[selectedLocale], [field]: value },
+    }));
+    setDirty(true);
+  }
 
   function handleAddLocale(locale: string) {
     setLocaleData((prev) => {
@@ -403,8 +428,8 @@ export default function StoreListingPage() {
         {readOnly && (
           <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
             <Lock size={16} className="shrink-0" />
-            This version is live – showing what was submitted. Select an
-            editable version to make changes.
+            This version is live – only promotional text can be updated
+            without a new review.
           </div>
         )}
 
@@ -438,7 +463,7 @@ export default function StoreListingPage() {
                     onChange={(e) => updateField("whatsNew", e.target.value)}
                     readOnly={readOnly}
                     placeholder="Describe what's new in this version..."
-                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0"
+                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
                   />
                 </CardContent>
                 <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -450,7 +475,7 @@ export default function StoreListingPage() {
               </Card>
             </section>
 
-            {/* Promotional text */}
+            {/* Promotional text – editable anytime per ASC rules */}
             <section className="space-y-2">
               <h3 className="section-title">Promotional text{localeTag}</h3>
               <Card className="gap-0 py-0">
@@ -460,9 +485,8 @@ export default function StoreListingPage() {
                     onChange={(e) =>
                       updateField("promotionalText", e.target.value)
                     }
-                    readOnly={readOnly}
                     placeholder="Inform App Store visitors of current features..."
-                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0"
+                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
                   />
                 </CardContent>
                 <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -484,7 +508,7 @@ export default function StoreListingPage() {
                     onChange={(e) => updateField("description", e.target.value)}
                     readOnly={readOnly}
                     placeholder="Describe your app..."
-                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0"
+                    className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
                   />
                 </CardContent>
                 <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -506,7 +530,7 @@ export default function StoreListingPage() {
                     onChange={(e) => updateField("keywords", e.target.value)}
                     readOnly={readOnly}
                     placeholder="keyword1,keyword2,keyword3"
-                    className="border-0 p-0 shadow-none focus-visible:ring-0 text-sm h-auto"
+                    className="border-0 p-0 shadow-none focus-visible:ring-0 text-sm h-auto dark:bg-transparent"
                   />
                 </CardContent>
                 <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">

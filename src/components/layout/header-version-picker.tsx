@@ -67,6 +67,7 @@ export function HeaderVersionPicker() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { versions } = useVersions();
+  const { guardNavigation } = useFormDirty();
 
   if (!appId) return null;
 
@@ -85,8 +86,6 @@ export function HeaderVersionPicker() {
   const selectedVersion = resolveVersion(versions, versionParam);
   const currentPlatform = selectedVersion?.attributes.platform ?? platforms[0] ?? "IOS";
   const platformVersions = filterPickerVersions(getVersionsByPlatform(versions, currentPlatform));
-
-  const { isDirty, guardNavigation } = useFormDirty();
 
   function navigate(versionId: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -111,7 +110,7 @@ export function HeaderVersionPicker() {
             <SelectTrigger className="!h-8 gap-1 bg-background px-2 text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               {platforms.map((p) => (
                 <SelectItem key={p} value={p}>
                   {PLATFORM_LABELS[p] ?? p}
@@ -127,7 +126,7 @@ export function HeaderVersionPicker() {
             <SelectTrigger className="!h-8 gap-1 bg-background px-2 font-mono text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" sideOffset={4}>
               {platformVersions.map((v) => (
                 <SelectItem key={v.id} value={v.id} className="font-mono">
                   <span className="flex items-center gap-1.5">
@@ -243,7 +242,7 @@ export function HeaderVersionActions() {
           New version
         </Button>
       )}
-      {(showSave || (showVersionActions && !readOnly)) && (
+      {(showSave || (showVersionActions && (!readOnly || isDirty))) && (
         <Button
           size="sm"
           className="h-8 gap-1 text-sm"

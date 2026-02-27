@@ -56,13 +56,13 @@ export default function BuildDetailPage() {
 
   const [whatsNew, setWhatsNew] = useState(build?.whatsNew ?? "");
 
+  const [mountTime] = useState(() => Date.now());
   const daysUntilExpiry = useMemo(() => {
     if (!build) return null;
-    const now = Date.now();
     const expiry = new Date(build.expiryDate).getTime();
-    if (expiry <= now) return null;
-    return Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-  }, [build]);
+    if (expiry <= mountTime) return null;
+    return Math.ceil((expiry - mountTime) / (1000 * 60 * 60 * 24));
+  }, [build, mountTime]);
 
   if (!build) {
     return (
@@ -126,7 +126,7 @@ export default function BuildDetailPage() {
               value={whatsNew}
               onChange={(e) => setWhatsNew(e.target.value)}
               placeholder="Describe what's new in this build…"
-              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0"
+              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
             />
           </CardContent>
           <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
