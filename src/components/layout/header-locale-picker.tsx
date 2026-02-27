@@ -4,15 +4,17 @@ import { useCallback } from "react";
 import { Separator } from "@/components/ui/separator";
 import { LocalePicker } from "@/components/locale-picker";
 import { useHeaderLocale } from "@/lib/header-locale-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 
 export function HeaderLocalePicker() {
   const configRef = useHeaderLocale();
   const config = configRef.current;
+  const { guardNavigation } = useFormDirty();
 
   // Stable wrappers that always read from the ref at call time
   const onLocaleChange = useCallback(
-    (code: string) => configRef.current?.onLocaleChange(code),
-    [configRef],
+    (code: string) => guardNavigation(() => configRef.current?.onLocaleChange(code)),
+    [configRef, guardNavigation],
   );
   const onLocaleAdd = useCallback(
     (code: string) => configRef.current?.onLocaleAdd(code),

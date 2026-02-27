@@ -18,14 +18,14 @@ export function useLocalizations(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const fetchData = useCallback(async (silent: boolean) => {
     if (!appId || !versionId) {
       setLocalizations([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
 
     try {
@@ -49,9 +49,11 @@ export function useLocalizations(
     }
   }, [appId, versionId]);
 
+  const refresh = useCallback(() => fetchData(true), [fetchData]);
+
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    fetchData(false);
+  }, [fetchData]);
 
   return { localizations, loading, error, refresh };
 }

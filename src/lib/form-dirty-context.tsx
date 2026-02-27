@@ -6,7 +6,18 @@ import {
   useState,
   useCallback,
   useRef,
+  useEffect,
 } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FormDirtyContextValue {
   isDirty: boolean;
@@ -15,6 +26,8 @@ interface FormDirtyContextValue {
   /** Pages register a save handler; the header button calls it. */
   onSave: () => void;
   registerSave: (handler: () => void | Promise<void>) => void;
+  /** Guard a navigation action – shows a confirmation dialog if dirty. */
+  guardNavigation: (onProceed: () => void) => void;
 }
 
 const FormDirtyContext = createContext<FormDirtyContextValue>({
@@ -23,11 +36,14 @@ const FormDirtyContext = createContext<FormDirtyContextValue>({
   setDirty: () => {},
   onSave: () => {},
   registerSave: () => {},
+  guardNavigation: (onProceed) => onProceed(),
 });
 
 export function FormDirtyProvider({ children }: { children: React.ReactNode }) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [guardOpen, setGuardOpen] = useState(false);
+  const pendingRef = useRef<(() => void) | null>(null);
   const saveRef = useRef<(() => void | Promise<void>) | null>(null);
 
   const setDirty = useCallback((dirty: boolean) => {
@@ -48,9 +64,69 @@ export function FormDirtyProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const guardNavigation = useCallback(
+    (onProceed: () => void) => {
+      if (!isDirty) {
+        onProceed();
+        return;
+      }
+      pendingRef.current = onProceed;
+      setGuardOpen(true);
+    },
+    [isDirty],
+  );
+
+  // Auto-close dialog if dirty state clears (e.g. save completed elsewhere)
+  useEffect(() => {
+    if (!isDirty && guardOpen) {
+      setGuardOpen(false);
+      pendingRef.current = null;
+    }
+  }, [isDirty, guardOpen]);
+
+  // Warn on tab close / refresh
+  useEffect(() => {
+    if (!isDirty) return;
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  function handleDiscard() {
+    setIsDirty(false);
+    setGuardOpen(false);
+    pendingRef.current?.();
+    pendingRef.current = null;
+  }
+
+  function handleCancel() {
+    setGuardOpen(false);
+    pendingRef.current = null;
+  }
+
   return (
-    <FormDirtyContext.Provider value={{ isDirty, isSaving, setDirty, onSave, registerSave }}>
+    <FormDirtyContext.Provider
+      value={{ isDirty, isSaving, setDirty, onSave, registerSave, guardNavigation }}
+    >
       {children}
+      <AlertDialog open={guardOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes that will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancel}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDiscard}>
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </FormDirtyContext.Provider>
   );
 }

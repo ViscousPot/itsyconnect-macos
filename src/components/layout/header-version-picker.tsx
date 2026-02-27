@@ -76,10 +76,13 @@ export function HeaderVersionPicker() {
   const currentPlatform = selectedVersion?.attributes.platform ?? platforms[0] ?? "IOS";
   const platformVersions = filterPickerVersions(getVersionsByPlatform(versions, currentPlatform));
 
+  const { isDirty, guardNavigation } = useFormDirty();
+
   function navigate(versionId: string) {
     const params = new URLSearchParams(searchParams.toString());
     params.set("version", versionId);
-    router.replace(`${pathname}?${params.toString()}`);
+    const url = `${pathname}?${params.toString()}`;
+    guardNavigation(() => router.replace(url));
   }
 
   function handlePlatformChange(platform: string) {
@@ -139,7 +142,7 @@ export function HeaderVersionActions() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { versions } = useVersions();
-  const { isDirty, isSaving, onSave } = useFormDirty();
+  const { isDirty, isSaving, onSave, guardNavigation } = useFormDirty();
 
   if (!appId) return null;
 
@@ -167,7 +170,7 @@ export function HeaderVersionActions() {
           size="sm"
           className="h-7 gap-1 text-xs"
           onClick={() =>
-            toast.info("New version creation not available in prototype")
+            guardNavigation(() => toast.info("New version creation not available in prototype"))
           }
         >
           <Plus size={12} />
@@ -193,11 +196,12 @@ export function HeaderRefreshButton() {
   const { appId } = useParams<{ appId?: string }>();
   const { refresh: refreshApps } = useApps();
   const { loading, refresh: refreshVersions } = useVersions();
+  const { guardNavigation } = useFormDirty();
   const [refreshing, setRefreshing] = useState(false);
 
   if (!appId) return null;
 
-  async function handleRefresh() {
+  async function doRefresh() {
     setRefreshing(true);
     try {
       await fetch("/api/refresh", {
@@ -218,7 +222,7 @@ export function HeaderRefreshButton() {
       variant="ghost"
       size="icon"
       className="ml-2 size-7"
-      onClick={handleRefresh}
+      onClick={() => guardNavigation(doRefresh)}
       disabled={busy}
     >
       <ArrowsClockwise size={14} className={busy ? "animate-spin" : ""} />

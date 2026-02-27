@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import {
   Gauge,
   Storefront,
@@ -76,6 +77,8 @@ const STICKY_PARAMS = ["version", "locale"];
 export function NavMain({ appId }: { appId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isDirty, guardNavigation } = useFormDirty();
   const base = `/dashboard/apps/${appId}`;
   const groups = getNavGroups(appId);
 
@@ -120,7 +123,14 @@ export function NavMain({ appId }: { appId: string }) {
                   tooltip={item.title}
                   isActive={isActive(item.href)}
                 >
-                  <Link href={`${item.href}${suffix}`}>
+                  <Link
+                    href={`${item.href}${suffix}`}
+                    onNavigate={(e) => {
+                      if (!isDirty) return;
+                      e.preventDefault();
+                      guardNavigation(() => router.push(`${item.href}${suffix}`));
+                    }}
+                  >
                     <item.icon size={16} />
                     <span>{item.title}</span>
                   </Link>

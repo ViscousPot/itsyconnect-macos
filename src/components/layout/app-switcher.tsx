@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { CaretUpDown, Plus, SpinnerGap } from "@phosphor-icons/react";
 import { useApps } from "@/lib/apps-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import { AppIcon } from "@/components/app-icon";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ export function AppSwitcher() {
   const { appId } = useParams<{ appId?: string }>();
   const { isMobile } = useSidebar();
   const { apps, loading } = useApps();
+  const { guardNavigation } = useFormDirty();
 
   const activeApp = apps.find((a) => a.id === appId);
 
@@ -73,7 +75,7 @@ export function AppSwitcher() {
             {apps.map((app) => (
               <DropdownMenuItem
                 key={app.id}
-                onClick={() => router.push(`/dashboard/apps/${app.id}`)}
+                onClick={() => guardNavigation(() => router.push(`/dashboard/apps/${app.id}`))}
                 className="gap-2 p-2"
               >
                 <AppIcon
@@ -92,7 +94,7 @@ export function AppSwitcher() {
             ))}
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => router.push("/dashboard/settings")}
+              onClick={() => guardNavigation(() => router.push("/dashboard/settings"))}
               className="gap-2 p-2"
             >
               <div className="flex size-6 items-center justify-center rounded-md border bg-background">
