@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { useApps } from "@/lib/apps-context";
 import { useVersions } from "@/lib/versions-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import {
   getVersionPlatforms,
   getVersionsByPlatform,
@@ -27,7 +28,6 @@ import {
   EDITABLE_STATES,
   PLATFORM_LABELS,
   STATE_DOT_COLORS,
-  stateLabel,
   type AscVersion,
 } from "@/lib/asc/version-types";
 
@@ -95,7 +95,7 @@ export function HeaderVersionPicker() {
         <>
           <Separator orientation="vertical" className="mx-2 !h-4" />
           <Select value={currentPlatform} onValueChange={handlePlatformChange}>
-            <SelectTrigger className="h-7 w-24 gap-1 text-xs">
+            <SelectTrigger className="!h-7 gap-1 px-2 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -111,7 +111,7 @@ export function HeaderVersionPicker() {
             value={selectedVersion?.id ?? ""}
             onValueChange={navigate}
           >
-            <SelectTrigger className="h-7 w-28 gap-1 font-mono text-xs">
+            <SelectTrigger className="!h-7 gap-1 px-2 font-mono text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -128,14 +128,6 @@ export function HeaderVersionPicker() {
             </SelectContent>
           </Select>
 
-          {selectedVersion && (
-            <span className="ml-1 hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-              <span
-                className={`size-1.5 shrink-0 rounded-full ${STATE_DOT_COLORS[selectedVersion.attributes.appVersionState] ?? "bg-muted-foreground"}`}
-              />
-              {stateLabel(selectedVersion.attributes.appVersionState)}
-            </span>
-          )}
         </>
       )}
     </>
@@ -147,6 +139,7 @@ export function HeaderVersionActions() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { versions } = useVersions();
+  const { isDirty, onSave } = useFormDirty();
 
   if (!appId) return null;
 
@@ -185,7 +178,8 @@ export function HeaderVersionActions() {
         <Button
           size="sm"
           className="h-7 gap-1 text-xs"
-          onClick={() => toast.success("Changes saved (prototype)")}
+          disabled={!isDirty}
+          onClick={onSave}
         >
           <FloppyDisk size={12} />
           Save

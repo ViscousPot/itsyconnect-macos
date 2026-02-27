@@ -12,20 +12,6 @@ import {
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -48,22 +34,15 @@ import { useVersions } from "@/lib/versions-context";
 import { resolveVersion, EDITABLE_STATES } from "@/lib/asc/version-types";
 import { useLocalizations } from "@/lib/hooks/use-localizations";
 import { useScreenshotSets } from "@/lib/hooks/use-screenshot-sets";
-import { localeName, LOCALE_NAMES } from "@/lib/asc/locale-names";
+import { localeName, sortLocales } from "@/lib/asc/locale-names";
 import {
   screenshotImageUrl,
   displayTypeLabel,
   sortDisplayTypes,
   type AscScreenshot,
 } from "@/lib/asc/display-types";
-
-/** Sort locales: primary locale first, rest alphabetical by display name. */
-function sortLocales(codes: string[], primaryLocale: string): string[] {
-  return [...codes].sort((a, b) => {
-    if (a === primaryLocale) return -1;
-    if (b === primaryLocale) return 1;
-    return localeName(a).localeCompare(localeName(b));
-  });
-}
+import { useSectionLocales } from "@/lib/section-locales-context";
+import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
 
 // ---------------------------------------------------------------------------
 // Sortable screenshot thumbnail
@@ -191,7 +170,14 @@ export default function ScreenshotsPage() {
 
   const [locales, setLocales] = useState<string[]>([]);
   const [selectedLocale, setSelectedLocale] = useState("");
-  const [addLocaleOpen, setAddLocaleOpen] = useState(false);
+
+  const { reportLocales, otherSectionLocales } = useSectionLocales("screenshots");
+
+  // Only offer locales that have a version localization
+  const versionLocales = useMemo(
+    () => localizations.map((l) => l.attributes.locale),
+    [localizations],
+  );
 
   // Start with only the primary locale
   useEffect(() => {
@@ -199,6 +185,11 @@ export default function ScreenshotsPage() {
     setLocales((prev) => (prev.length > 0 ? prev : [primaryLocale]));
     setSelectedLocale((prev) => prev || primaryLocale);
   }, [primaryLocale]);
+
+  // Report locales to cross-section context
+  useEffect(() => {
+    reportLocales(locales);
+  }, [locales, reportLocales]);
 
   const selectedLocalization = localizations.find(
     (l) => l.attributes.locale === selectedLocale,
@@ -268,7 +259,7 @@ export default function ScreenshotsPage() {
     [apiBase, refresh],
   );
 
-  const handleDelete = useCallback(
+  const handleDeleteScreenshot = useCallback(
     async (screenshotId: string) => {
       try {
         const res = await fetch(`${apiBase}/${screenshotId}`, {
@@ -325,17 +316,48 @@ export default function ScreenshotsPage() {
   function handleAddLocale(locale: string) {
     setLocales((prev) => sortLocales([...prev, locale], primaryLocale));
     setSelectedLocale(locale);
-    setAddLocaleOpen(false);
     toast.success(`Added ${localeName(locale)}`);
   }
 
-  // Only offer locales that have a version localization
-  const versionLocales = new Set(
-    localizations.map((l) => l.attributes.locale),
-  );
-  const availableLocales = Object.entries(LOCALE_NAMES).filter(
-    ([code]) => !locales.includes(code) && versionLocales.has(code),
-  );
+  function handleBulkAddLocales(codes: string[]) {
+    setLocales((prev) => {
+      const combined = new Set([...prev, ...codes]);
+      return sortLocales([...combined], primaryLocale);
+    });
+    toast.success(`Added ${codes.length} locales`);
+  }
+
+  function handleDeleteLocale(code: string) {
+    setLocales((prev) => {
+      const next = prev.filter((l) => l !== code);
+      if (selectedLocale === code) {
+        setSelectedLocale(next[0] ?? "");
+      }
+      return next;
+    });
+    toast(`Removed ${localeName(code)}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setLocales((prev) => sortLocales([...prev, code], primaryLocale));
+        },
+      },
+    });
+  }
+
+  // Register locale picker in the header bar
+  useRegisterHeaderLocale({
+    locales,
+    selectedLocale,
+    primaryLocale,
+    onLocaleChange: setSelectedLocale,
+    onLocaleAdd: handleAddLocale,
+    onLocalesAdd: handleBulkAddLocales,
+    onLocaleDelete: handleDeleteLocale,
+    section: "screenshots",
+    otherSectionLocales,
+    readOnly,
+  });
 
   if (!app) {
     return (
@@ -355,54 +377,6 @@ export default function ScreenshotsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Locale tabs + add locale */}
-      <div className="flex flex-wrap items-center gap-2">
-        {locales.length > 0 && (
-          <Tabs value={selectedLocale} onValueChange={setSelectedLocale}>
-            <TabsList className="!h-auto flex-wrap justify-start">
-              {locales.map((locale) => (
-                <TabsTrigger key={locale} value={locale} className="flex-none">
-                  {localeName(locale)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
-
-        {!readOnly && availableLocales.length > 0 && (
-          <Popover open={addLocaleOpen} onOpenChange={setAddLocaleOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <Plus size={14} />
-                Add locale
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search locales..." />
-                <CommandList>
-                  <CommandEmpty>No locales found.</CommandEmpty>
-                  <CommandGroup>
-                    {availableLocales.map(([code, name]) => (
-                      <CommandItem
-                        key={code}
-                        value={`${name} ${code}`}
-                        onSelect={() => handleAddLocale(code)}
-                      >
-                        <span>{name}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {code}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
-
       {locales.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
           No localizations for this version.
@@ -476,7 +450,7 @@ export default function ScreenshotsPage() {
                             key={ss.id}
                             screenshot={ss}
                             readOnly={readOnly}
-                            onDelete={handleDelete}
+                            onDelete={handleDeleteScreenshot}
                           />
                         ))}
 

@@ -173,15 +173,15 @@ function setupMenu(): void {
     {
       label: "View",
       submenu: [
-        { role: "reload" },
-        { role: "forceReload" },
-        { role: "toggleDevTools" },
-        { type: "separator" },
-        { role: "resetZoom" },
-        { role: "zoomIn" },
-        { role: "zoomOut" },
-        { type: "separator" },
-        { role: "togglefullscreen" },
+        ...(isDev
+          ? [
+              { role: "reload" as const },
+              { role: "forceReload" as const },
+              { role: "toggleDevTools" as const },
+              { type: "separator" as const },
+            ]
+          : []),
+        { role: "togglefullscreen" as const },
       ],
     },
     {
@@ -208,6 +208,8 @@ function createWindow(port: number): void {
 
   mainWindow = new BrowserWindow({
     ...state,
+    minWidth: 1200,
+    minHeight: 800,
     show: false,
     titleBarStyle: "hiddenInset",
     icon: path.join(app.getAppPath(), "public", "icon.png"),
@@ -216,6 +218,19 @@ function createWindow(port: number): void {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Lock zoom level – prevent Cmd+/Cmd-/Cmd+0 font size changes
+  mainWindow.webContents.setZoomFactor(1);
+  mainWindow.webContents.setZoomLevel(0);
+  mainWindow.webContents.on("before-input-event", (_event, input) => {
+    if (
+      input.meta &&
+      !input.shift &&
+      (input.key === "=" || input.key === "-" || input.key === "0")
+    ) {
+      _event.preventDefault();
+    }
   });
 
   mainWindow.loadURL(`http://127.0.0.1:${port}`);

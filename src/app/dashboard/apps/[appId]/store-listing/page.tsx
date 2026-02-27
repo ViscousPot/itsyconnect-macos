@@ -4,36 +4,26 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AppWindow, Lock, PencilSimple, Plus, SpinnerGap } from "@phosphor-icons/react";
+import { AppWindow, Lock, PencilSimple, SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useApps } from "@/lib/apps-context";
 import { useVersions } from "@/lib/versions-context";
-import { resolveVersion, EDITABLE_STATES } from "@/lib/asc/version-types";
+import { useFormDirty } from "@/lib/form-dirty-context";
+import { resolveVersion, EDITABLE_STATES, STATE_DOT_COLORS, stateLabel } from "@/lib/asc/version-types";
 import { useLocalizations } from "@/lib/hooks/use-localizations";
 import type { AscLocalization } from "@/lib/asc/localizations";
 import {
   localeName,
-  LOCALE_NAMES,
+  sortLocales,
   FIELD_LIMITS,
 } from "@/lib/asc/locale-names";
+import { useSectionLocales } from "@/lib/section-locales-context";
+import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
 
 
 interface LocaleFields {
@@ -43,15 +33,6 @@ interface LocaleFields {
   promotionalText: string;
   supportUrl: string;
   marketingUrl: string;
-}
-
-/** Sort locales: primary locale first, rest alphabetical by display name. */
-function sortLocales(codes: string[], primaryLocale: string): string[] {
-  return [...codes].sort((a, b) => {
-    if (a === primaryLocale) return -1;
-    if (b === primaryLocale) return 1;
-    return localeName(a).localeCompare(localeName(b));
-  });
 }
 
 function emptyLocaleFields(): LocaleFields {
@@ -106,12 +87,14 @@ export default function StoreListingPage() {
   const [localeData, setLocaleData] = useState<Record<string, LocaleFields>>({});
   const [locales, setLocales] = useState<string[]>([]);
   const [selectedLocale, setSelectedLocale] = useState("");
-  const [addLocaleOpen, setAddLocaleOpen] = useState(false);
 
   const current = localeData[selectedLocale] ?? emptyLocaleFields();
 
+  const { setDirty } = useFormDirty();
   const [releaseType, setReleaseType] = useState("manually");
   const [phasedRelease, setPhasedRelease] = useState(false);
+
+  const { reportLocales, otherSectionLocales } = useSectionLocales("store-listing");
 
   // Reset locale data when localizations change
   useEffect(() => {
@@ -120,7 +103,13 @@ export default function StoreListingPage() {
     const sorted = sortLocales(Object.keys(data), primaryLocale);
     setLocales(sorted);
     setSelectedLocale(sorted[0] ?? "");
-  }, [localizations, primaryLocale]);
+    setDirty(false);
+  }, [localizations, primaryLocale, setDirty]);
+
+  // Report locales to cross-section context
+  useEffect(() => {
+    reportLocales(locales);
+  }, [locales, reportLocales]);
 
   const updateField = useCallback(
     (field: keyof LocaleFields, value: string) => {
@@ -128,8 +117,9 @@ export default function StoreListingPage() {
         ...prev,
         [selectedLocale]: { ...prev[selectedLocale], [field]: value },
       }));
+      setDirty(true);
     },
-    [selectedLocale]
+    [selectedLocale, setDirty]
   );
 
   function handleAddLocale(locale: string) {
@@ -139,13 +129,64 @@ export default function StoreListingPage() {
       return next;
     });
     setSelectedLocale(locale);
-    setAddLocaleOpen(false);
+    setDirty(true);
     toast.success(`Added ${localeName(locale)}`);
   }
 
-  const availableLocales = Object.entries(LOCALE_NAMES).filter(
-    ([code]) => !localeData[code]
-  );
+  function handleBulkAddLocales(codes: string[]) {
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      for (const code of codes) {
+        if (!next[code]) next[code] = emptyLocaleFields();
+      }
+      setLocales(sortLocales(Object.keys(next), primaryLocale));
+      return next;
+    });
+    setDirty(true);
+    toast.success(`Added ${codes.length} locales`);
+  }
+
+  function handleDeleteLocale(code: string) {
+    const deletedData = localeData[code];
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      delete next[code];
+      const sorted = sortLocales(Object.keys(next), primaryLocale);
+      setLocales(sorted);
+      if (selectedLocale === code) {
+        setSelectedLocale(sorted[0] ?? "");
+      }
+      return next;
+    });
+    setDirty(true);
+    toast(`Removed ${localeName(code)}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setLocaleData((prev) => {
+            const next = { ...prev, [code]: deletedData ?? emptyLocaleFields() };
+            setLocales(sortLocales(Object.keys(next), primaryLocale));
+            return next;
+          });
+          setDirty(true);
+        },
+      },
+    });
+  }
+
+  // Register locale picker in the header bar
+  useRegisterHeaderLocale({
+    locales,
+    selectedLocale,
+    primaryLocale,
+    onLocaleChange: setSelectedLocale,
+    onLocaleAdd: handleAddLocale,
+    onLocalesAdd: handleBulkAddLocales,
+    onLocaleDelete: handleDeleteLocale,
+    section: "store-listing",
+    otherSectionLocales,
+    readOnly,
+  });
 
   if (!app) {
     return (
@@ -192,6 +233,14 @@ export default function StoreListingPage() {
             <span className="font-mono text-2xl font-bold tracking-tight">
               {selectedVersion?.attributes.versionString ?? "–"}
             </span>
+            {selectedVersion && (
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <span
+                  className={`size-1.5 shrink-0 rounded-full ${STATE_DOT_COLORS[selectedVersion.attributes.appVersionState] ?? "bg-muted-foreground"}`}
+                />
+                {stateLabel(selectedVersion.attributes.appVersionState)}
+              </span>
+            )}
             {!readOnly && (
               <Button
                 variant="ghost"
@@ -206,54 +255,6 @@ export default function StoreListingPage() {
             )}
           </div>
         </section>
-
-        {/* Locale tabs + add locale */}
-        <div className="flex flex-wrap items-center gap-2">
-          {locales.length > 0 && (
-            <Tabs value={selectedLocale} onValueChange={setSelectedLocale}>
-              <TabsList className="!h-auto flex-wrap justify-start">
-                {locales.map((locale) => (
-                  <TabsTrigger key={locale} value={locale} className="flex-none">
-                    {localeName(locale)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          )}
-
-          {!readOnly && availableLocales.length > 0 && (
-            <Popover open={addLocaleOpen} onOpenChange={setAddLocaleOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                  <Plus size={14} />
-                  Add locale
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-64 p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Search locales..." />
-                  <CommandList>
-                    <CommandEmpty>No locales found.</CommandEmpty>
-                    <CommandGroup>
-                      {availableLocales.map(([code, name]) => (
-                        <CommandItem
-                          key={code}
-                          value={`${name} ${code}`}
-                          onSelect={() => handleAddLocale(code)}
-                        >
-                          <span>{name}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {code}
-                          </span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          )}
-        </div>
 
         {locales.length === 0 ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -396,7 +397,7 @@ export default function StoreListingPage() {
             <p className="text-sm font-medium">Release method</p>
             <Tabs
               value={releaseType}
-              onValueChange={readOnly ? undefined : setReleaseType}
+              onValueChange={readOnly ? undefined : (v) => { setReleaseType(v); setDirty(true); }}
               className="w-full max-w-md"
             >
               <TabsList className="grid w-full grid-cols-3">
@@ -430,7 +431,7 @@ export default function StoreListingPage() {
             <div className="flex items-center gap-3">
               <Switch
                 checked={phasedRelease}
-                onCheckedChange={setPhasedRelease}
+                onCheckedChange={(v) => { setPhasedRelease(v); setDirty(true); }}
                 disabled={readOnly}
               />
               <Label className="text-sm">Enable 7-day phased rollout</Label>

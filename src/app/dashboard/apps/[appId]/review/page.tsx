@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SpinnerGap } from "@phosphor-icons/react";
 import { useApps } from "@/lib/apps-context";
 import { useVersions } from "@/lib/versions-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import { resolveVersion } from "@/lib/asc/version-types";
 
 export default function AppReviewPage() {
@@ -26,6 +27,7 @@ export default function AppReviewPage() {
 
   const reviewDetail = selectedVersion?.reviewDetail?.attributes;
 
+  const { setDirty } = useFormDirty();
   const [notes, setNotes] = useState("");
   const [signInRequired, setSignInRequired] = useState(false);
   const [demoName, setDemoName] = useState("");
@@ -56,7 +58,8 @@ export default function AppReviewPage() {
       setPhone("");
       setEmail("");
     }
-  }, [reviewDetail]);
+    setDirty(false);
+  }, [reviewDetail, setDirty]);
 
   if (!app) {
     return (
@@ -85,7 +88,7 @@ export default function AppReviewPage() {
               placeholder="Provide any additional information the App Review team might need..."
               className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => { setNotes(e.target.value); setDirty(true); }}
             />
           </CardContent>
           <div className="flex items-center justify-end border-t px-3 py-1.5">
@@ -103,7 +106,7 @@ export default function AppReviewPage() {
           <Switch
             id="sign-in-required"
             checked={signInRequired}
-            onCheckedChange={setSignInRequired}
+            onCheckedChange={(v) => { setSignInRequired(v); setDirty(true); }}
           />
           <Label htmlFor="sign-in-required" className="text-sm">
             Sign-in required
@@ -117,7 +120,7 @@ export default function AppReviewPage() {
                 placeholder="demo@example.com"
                 className="text-sm"
                 value={demoName}
-                onChange={(e) => setDemoName(e.target.value)}
+                onChange={(e) => { setDemoName(e.target.value); setDirty(true); }}
               />
             </div>
             <div className="space-y-2">
@@ -127,7 +130,7 @@ export default function AppReviewPage() {
                 placeholder="Password"
                 className="text-sm"
                 value={demoPassword}
-                onChange={(e) => setDemoPassword(e.target.value)}
+                onChange={(e) => { setDemoPassword(e.target.value); setDirty(true); }}
               />
             </div>
           </div>
@@ -146,7 +149,7 @@ export default function AppReviewPage() {
             <Input
               className="text-sm"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => { setFirstName(e.target.value); setDirty(true); }}
             />
           </div>
           <div className="space-y-2">
@@ -154,7 +157,7 @@ export default function AppReviewPage() {
             <Input
               className="text-sm"
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              onChange={(e) => { setLastName(e.target.value); setDirty(true); }}
             />
           </div>
           <div className="space-y-2">
@@ -162,7 +165,7 @@ export default function AppReviewPage() {
             <Input
               className="text-sm"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => { setPhone(e.target.value); setDirty(true); }}
             />
           </div>
           <div className="space-y-2">
@@ -171,7 +174,7 @@ export default function AppReviewPage() {
               type="email"
               className="text-sm"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setDirty(true); }}
             />
           </div>
         </div>

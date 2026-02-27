@@ -2,23 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -27,14 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, SpinnerGap } from "@phosphor-icons/react";
+import { SpinnerGap } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useApps } from "@/lib/apps-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import { useAppInfo, useAppInfoLocalizations } from "@/lib/hooks/use-app-info";
 import { pickAppInfo } from "@/lib/asc/app-info-utils";
 import type { AscAppInfoLocalization } from "@/lib/asc/app-info";
-import { localeName, LOCALE_NAMES } from "@/lib/asc/locale-names";
+import { localeName, sortLocales } from "@/lib/asc/locale-names";
+import { useSectionLocales } from "@/lib/section-locales-context";
+import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
 
 const AGE_RATING_LABELS: Record<string, string> = {
   FOUR_PLUS: "4+",
@@ -57,15 +45,6 @@ function emptyLocaleFields(): AppInfoLocaleFields {
     privacyPolicyUrl: "",
     privacyChoicesUrl: "",
   };
-}
-
-/** Sort locales: primary locale first, rest alphabetical by display name. */
-function sortLocales(codes: string[], primaryLocale: string): string[] {
-  return [...codes].sort((a, b) => {
-    if (a === primaryLocale) return -1;
-    if (b === primaryLocale) return 1;
-    return localeName(a).localeCompare(localeName(b));
-  });
 }
 
 function buildLocaleData(
@@ -101,9 +80,11 @@ export default function AppDetailsPage() {
   >({});
   const [locales, setLocales] = useState<string[]>([]);
   const [selectedLocale, setSelectedLocale] = useState("");
-  const [addLocaleOpen, setAddLocaleOpen] = useState(false);
 
   const current = localeData[selectedLocale] ?? emptyLocaleFields();
+
+  const { setDirty } = useFormDirty();
+  const { reportLocales, otherSectionLocales } = useSectionLocales("details");
 
   useEffect(() => {
     const data = buildLocaleData(localizations);
@@ -111,7 +92,13 @@ export default function AppDetailsPage() {
     const sorted = sortLocales(Object.keys(data), primaryLocale);
     setLocales(sorted);
     setSelectedLocale(sorted[0] ?? "");
-  }, [localizations, primaryLocale]);
+    setDirty(false);
+  }, [localizations, primaryLocale, setDirty]);
+
+  // Report locales to cross-section context
+  useEffect(() => {
+    reportLocales(locales);
+  }, [locales, reportLocales]);
 
   const updateField = useCallback(
     (field: keyof AppInfoLocaleFields, value: string) => {
@@ -119,8 +106,9 @@ export default function AppDetailsPage() {
         ...prev,
         [selectedLocale]: { ...prev[selectedLocale], [field]: value },
       }));
+      setDirty(true);
     },
-    [selectedLocale],
+    [selectedLocale, setDirty],
   );
 
   function handleAddLocale(locale: string) {
@@ -130,13 +118,63 @@ export default function AppDetailsPage() {
       return next;
     });
     setSelectedLocale(locale);
-    setAddLocaleOpen(false);
+    setDirty(true);
     toast.success(`Added ${localeName(locale)}`);
   }
 
-  const availableLocales = Object.entries(LOCALE_NAMES).filter(
-    ([code]) => !localeData[code],
-  );
+  function handleBulkAddLocales(codes: string[]) {
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      for (const code of codes) {
+        if (!next[code]) next[code] = emptyLocaleFields();
+      }
+      setLocales(sortLocales(Object.keys(next), primaryLocale));
+      return next;
+    });
+    setDirty(true);
+    toast.success(`Added ${codes.length} locales`);
+  }
+
+  function handleDeleteLocale(code: string) {
+    const deletedData = localeData[code];
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      delete next[code];
+      const sorted = sortLocales(Object.keys(next), primaryLocale);
+      setLocales(sorted);
+      if (selectedLocale === code) {
+        setSelectedLocale(sorted[0] ?? "");
+      }
+      return next;
+    });
+    setDirty(true);
+    toast(`Removed ${localeName(code)}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setLocaleData((prev) => {
+            const next = { ...prev, [code]: deletedData ?? emptyLocaleFields() };
+            setLocales(sortLocales(Object.keys(next), primaryLocale));
+            return next;
+          });
+          setDirty(true);
+        },
+      },
+    });
+  }
+
+  // Register locale picker in the header bar
+  useRegisterHeaderLocale({
+    locales,
+    selectedLocale,
+    primaryLocale,
+    onLocaleChange: setSelectedLocale,
+    onLocaleAdd: handleAddLocale,
+    onLocalesAdd: handleBulkAddLocales,
+    onLocaleDelete: handleDeleteLocale,
+    section: "details",
+    otherSectionLocales,
+  });
 
   if (!app) {
     return (
@@ -193,54 +231,6 @@ export default function AppDetailsPage() {
           </SelectContent>
         </Select>
       </section>
-
-      {/* Locale tabs + add locale */}
-      <div className="flex flex-wrap items-center gap-2">
-        {locales.length > 0 && (
-          <Tabs value={selectedLocale} onValueChange={setSelectedLocale}>
-            <TabsList className="!h-auto flex-wrap justify-start">
-              {locales.map((locale) => (
-                <TabsTrigger key={locale} value={locale} className="flex-none">
-                  {localeName(locale)}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-        )}
-
-        {availableLocales.length > 0 && (
-          <Popover open={addLocaleOpen} onOpenChange={setAddLocaleOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5">
-                <Plus size={14} />
-                Add locale
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search locales..." />
-                <CommandList>
-                  <CommandEmpty>No locales found.</CommandEmpty>
-                  <CommandGroup>
-                    {availableLocales.map(([code, name]) => (
-                      <CommandItem
-                        key={code}
-                        value={`${name} ${code}`}
-                        onSelect={() => handleAddLocale(code)}
-                      >
-                        <span>{name}</span>
-                        <span className="ml-auto text-xs text-muted-foreground">
-                          {code}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        )}
-      </div>
 
       {locales.length > 0 && (
         <>

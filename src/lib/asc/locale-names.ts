@@ -44,6 +44,15 @@ export function localeName(locale: string): string {
   return LOCALE_NAMES[locale] ?? locale;
 }
 
+/** Sort locales: primary locale first, rest alphabetical by display name. */
+export function sortLocales(codes: string[], primaryLocale: string): string[] {
+  return [...codes].sort((a, b) => {
+    if (a === primaryLocale) return -1;
+    if (b === primaryLocale) return 1;
+    return localeName(a).localeCompare(localeName(b));
+  });
+}
+
 export const FIELD_LIMITS: Record<string, number> = {
   name: 30,
   subtitle: 30,
