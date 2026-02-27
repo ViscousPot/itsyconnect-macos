@@ -1,7 +1,7 @@
 <h1>Itsyconnect</h1>
 
 <p>
-  App Store Connect, but good.
+  Better App Store Connect.
 </p>
 
 <p>
