@@ -28,11 +28,28 @@ import {
   PLATFORM_LABELS,
   STATE_DOT_COLORS,
   stateLabel,
+  type AscVersion,
 } from "@/lib/asc/version-types";
 
 const VERSION_PAGES = new Set(["store-listing", "screenshots", "review"]);
 const NEW_VERSION_PAGES = new Set(["", "store-listing", "screenshots", "review"]);
 const SAVE_ONLY_PAGES = new Set(["details"]);
+
+const LIVE_STATES = new Set([
+  "READY_FOR_SALE",
+  "READY_FOR_DISTRIBUTION",
+  "ACCEPTED",
+]);
+
+/** All non-live versions + only the most recent live version. */
+function filterPickerVersions(versions: AscVersion[]): AscVersion[] {
+  let foundLive = false;
+  return versions.filter((v) => {
+    if (!LIVE_STATES.has(v.attributes.appVersionState)) return true;
+    if (!foundLive) { foundLive = true; return true; }
+    return false;
+  });
+}
 
 export function HeaderVersionPicker() {
   const { appId } = useParams<{ appId?: string }>();
@@ -57,7 +74,7 @@ export function HeaderVersionPicker() {
   const versionParam = searchParams.get("version");
   const selectedVersion = resolveVersion(versions, versionParam);
   const currentPlatform = selectedVersion?.attributes.platform ?? platforms[0] ?? "IOS";
-  const platformVersions = getVersionsByPlatform(versions, currentPlatform);
+  const platformVersions = filterPickerVersions(getVersionsByPlatform(versions, currentPlatform));
 
   function navigate(versionId: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -100,7 +117,12 @@ export function HeaderVersionPicker() {
             <SelectContent>
               {platformVersions.map((v) => (
                 <SelectItem key={v.id} value={v.id} className="font-mono">
-                  {v.attributes.versionString}
+                  <span className="flex items-center gap-1.5">
+                    {v.attributes.versionString}
+                    <span
+                      className={`size-1.5 shrink-0 rounded-full ${STATE_DOT_COLORS[v.attributes.appVersionState] ?? "bg-muted-foreground"}`}
+                    />
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>

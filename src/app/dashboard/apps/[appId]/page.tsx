@@ -179,21 +179,32 @@ export default function AppOverviewPage() {
           <Link
             key={version.id}
             href={`/dashboard/apps/${appId}/store-listing?version=${version.id}`}
-            className="block"
+            className="block h-full"
           >
-            <Card className="transition-colors hover:bg-accent/50">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {PLATFORM_LABELS[version.attributes.platform] ?? version.attributes.platform}
-                </CardTitle>
+            <Card className="flex h-full flex-col transition-colors hover:bg-accent/50">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle className="text-sm font-medium">
+                    {PLATFORM_LABELS[version.attributes.platform] ?? version.attributes.platform}
+                  </CardTitle>
+                  {version.build && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Build {version.build.attributes.version} &middot;{" "}
+                      {new Date(version.build.attributes.uploadedDate).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </p>
+                  )}
+                </div>
                 <span
                   className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${STATE_BADGE_CLASSES[version.attributes.appVersionState] ?? "bg-muted text-muted-foreground border-border"}`}
                 >
                   {stateLabel(version.attributes.appVersionState)}
                 </span>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-baseline gap-2">
+              <CardContent className="mt-auto">
+                <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold font-mono">
                     {version.attributes.versionString}
                   </span>
@@ -201,15 +212,6 @@ export default function AppOverviewPage() {
                     className={`size-2 rounded-full ${STATE_DOT_COLORS[version.attributes.appVersionState] ?? "bg-muted-foreground"}`}
                   />
                 </div>
-                {version.build && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Build {version.build.attributes.version} &middot;{" "}
-                    {new Date(version.build.attributes.uploadedDate).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                )}
               </CardContent>
             </Card>
           </Link>
