@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, usePathname } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,6 +31,7 @@ const TF_SUB_TITLES: Record<string, string> = {
 
 export function DashboardBreadcrumb() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { appId } = useParams<{ appId?: string }>();
 
   const { apps } = useApps();
@@ -102,11 +103,13 @@ export function DashboardBreadcrumb() {
     // /testflight/[buildId]
     if (tfSub && !(tfSub in TF_SUB_TITLES)) {
       const build = getTFBuild(tfSub);
+      const qs = searchParams.toString();
+      const buildsHref = qs ? `${tfBase}?${qs}` : tfBase;
       return (
         <>
           <BreadcrumbSeparator className="hidden md:block" />
           <BreadcrumbItem className="hidden md:block">
-            <BreadcrumbLink href={tfBase}>Builds</BreadcrumbLink>
+            <BreadcrumbLink href={buildsHref}>Builds</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator className="hidden md:block" />
           <BreadcrumbItem>

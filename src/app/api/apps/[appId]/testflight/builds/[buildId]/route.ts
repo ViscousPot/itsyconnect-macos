@@ -5,10 +5,12 @@ import { hasCredentials } from "@/lib/asc/client";
 import { getMockTFBuilds } from "@/lib/mock-testflight";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ appId: string; buildId: string }> },
 ) {
   const { appId, buildId } = await params;
+  const url = new URL(request.url);
+  const forceRefresh = url.searchParams.get("refresh") === "1";
 
   if (!hasCredentials()) {
     const builds = getMockTFBuilds(appId);
@@ -20,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const builds = await listBuilds(appId);
+    const builds = await listBuilds(appId, forceRefresh);
     const build = builds.find((b) => b.id === buildId);
     if (!build) {
       return NextResponse.json({ error: "Build not found" }, { status: 404 });

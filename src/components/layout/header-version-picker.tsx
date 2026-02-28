@@ -100,12 +100,10 @@ export function HeaderVersionPicker() {
     .replace(/^\//, "");
   const pageSegment = subpath.split("/")[0];
 
+  // Show on testflight builds page only (exact match, no subpages)
   const isTestFlight = subpath === "testflight";
   if (!VERSION_PAGES.has(pageSegment) && !isTestFlight) return null;
-
-  // On testflight subpages (build detail, groups, etc.) hide the picker
-  // visually but keep the Radix tree mounted to prevent hydration ID drift.
-  const shouldHide = pageSegment === "testflight" && !isTestFlight;
+  if (pageSegment === "testflight" && !isTestFlight) return null;
 
   const platforms = getVersionPlatforms(versions);
   const versionParam = searchParams.get("version");
@@ -157,7 +155,7 @@ export function HeaderVersionPicker() {
   }
 
   return (
-    <div className={shouldHide ? "hidden" : "contents"}>
+    <>
       <Separator orientation="vertical" className="mx-2 !h-4" />
       <Popover open={platformPickerOpen} onOpenChange={setPlatformPickerOpen}>
         <PopoverTrigger asChild>
@@ -326,7 +324,7 @@ export function HeaderVersionPicker() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </>
   );
 }
 

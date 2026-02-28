@@ -89,6 +89,17 @@ export default function BuildDetailPage() {
     }
   }, [appId, buildId]);
 
+  // Refetch just testers (lightweight, no full page reload)
+  const refetchTesters = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/apps/${appId}/testflight/builds/${buildId}/testers`);
+      if (res.ok) {
+        const data = await res.json();
+        setTesters(data.testers ?? []);
+      }
+    } catch { /* best-effort */ }
+  }, [appId, buildId]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
@@ -180,6 +191,8 @@ export default function BuildDetailPage() {
     );
   }
 
+  const isExpired = build.expired;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -216,21 +229,25 @@ export default function BuildDetailPage() {
             {formatDateTime(build.uploadedDate)}
           </p>
         </div>
-        <div className="h-8 border-l" />
-        <div>
-          <p className="text-muted-foreground">Installs</p>
-          <p className="font-medium tabular-nums">{build.installs}</p>
-        </div>
-        <div className="h-8 border-l" />
-        <div>
-          <p className="text-muted-foreground">Sessions</p>
-          <p className="font-medium tabular-nums">{build.sessions}</p>
-        </div>
-        <div className="h-8 border-l" />
-        <div>
-          <p className="text-muted-foreground">Crashes</p>
-          <p className="font-medium tabular-nums">{build.crashes}</p>
-        </div>
+        {!isExpired && (
+          <>
+            <div className="h-8 border-l" />
+            <div>
+              <p className="text-muted-foreground">Installs</p>
+              <p className="font-medium tabular-nums">{build.installs}</p>
+            </div>
+            <div className="h-8 border-l" />
+            <div>
+              <p className="text-muted-foreground">Sessions</p>
+              <p className="font-medium tabular-nums">{build.sessions}</p>
+            </div>
+            <div className="h-8 border-l" />
+            <div>
+              <p className="text-muted-foreground">Crashes</p>
+              <p className="font-medium tabular-nums">{build.crashes}</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* What's new */}
@@ -240,7 +257,8 @@ export default function BuildDetailPage() {
           <CardContent className="px-5 py-4">
             <Textarea
               value={whatsNew}
-              onChange={(e) => {
+              readOnly={isExpired}
+              onChange={isExpired ? undefined : (e) => {
                 setWhatsNew(e.target.value);
                 setDirty(e.target.value !== (build.whatsNew ?? ""));
               }}
@@ -248,28 +266,39 @@ export default function BuildDetailPage() {
               className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
             />
           </CardContent>
-          <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
-            <CharCount value={whatsNew} limit={4000} />
-          </div>
+          {!isExpired && (
+            <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
+              <CharCount value={whatsNew} limit={4000} />
+            </div>
+          )}
         </Card>
       </section>
 
-      {/* Groups */}
-      <GroupsSection
-        appId={appId}
-        buildId={buildId}
-        buildGroups={buildGroups}
-        availableGroups={availableGroups}
-        onMutated={() => fetchData(true)}
-      />
+      {!isExpired && (
+        <>
+          {/* Groups */}
+          <GroupsSection
+            appId={appId}
+            buildId={buildId}
+            buildGroups={buildGroups}
+            availableGroups={availableGroups}
+            onGroupAdded={(groupId) => {
+              setBuild((prev) => prev ? { ...prev, groupIds: [...prev.groupIds, groupId] } : prev);
+            }}
+            onGroupRemoved={(groupId) => {
+              setBuild((prev) => prev ? { ...prev, groupIds: prev.groupIds.filter((id) => id !== groupId) } : prev);
+            }}
+          />
 
-      {/* Testers */}
-      <TestersSection
-        appId={appId}
-        buildId={buildId}
-        testers={testers}
-        onMutated={() => fetchData(true)}
-      />
+          {/* Testers */}
+          <TestersSection
+            appId={appId}
+            buildId={buildId}
+            testers={testers}
+            onMutated={refetchTesters}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -281,13 +310,15 @@ function GroupsSection({
   buildId,
   buildGroups,
   availableGroups,
-  onMutated,
+  onGroupAdded,
+  onGroupRemoved,
 }: {
   appId: string;
   buildId: string;
   buildGroups: TFGroup[];
   availableGroups: TFGroup[];
-  onMutated: () => void;
+  onGroupAdded: (groupId: string) => void;
+  onGroupRemoved: (groupId: string) => void;
 }) {
   const [removing, setRemoving] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -305,7 +336,7 @@ function GroupsSection({
         throw new Error(data.error ?? "Failed to add group");
       }
       toast.success("Build added to group");
-      onMutated();
+      onGroupAdded(groupId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add group");
     } finally {
@@ -326,7 +357,7 @@ function GroupsSection({
         throw new Error(data.error ?? "Failed to remove group");
       }
       toast.success("Build removed from group");
-      onMutated();
+      onGroupRemoved(groupId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove group");
     } finally {

@@ -185,11 +185,11 @@ export default function TestFlightBuildsPage() {
               <TableRow
                 key={build.id}
                 className="cursor-pointer"
-                onClick={() =>
-                  router.push(
-                    `/dashboard/apps/${appId}/testflight/${build.id}`,
-                  )
-                }
+                onClick={() => {
+                  const qs = searchParams.toString();
+                  const url = `/dashboard/apps/${appId}/testflight/${build.id}${qs ? `?${qs}` : ""}`;
+                  router.push(url);
+                }}
               >
                 <TableCell className="font-medium">
                   {build.buildNumber}
@@ -221,7 +221,9 @@ export default function TestFlightBuildsPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  {buildGroups.length > 0 ? (
+                  {build.expired ? (
+                    <span className="text-sm text-muted-foreground">&ndash;</span>
+                  ) : buildGroups.length > 0 ? (
                     <div className="space-y-0.5">
                       {buildGroups.map((g) => (
                         <div key={g.id} className="flex items-center gap-1.5 text-sm">
@@ -237,13 +239,13 @@ export default function TestFlightBuildsPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {build.installs > 0 ? build.installs : "–"}
+                  {build.expired ? "–" : build.installs > 0 ? build.installs : "–"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {build.sessions > 0 ? build.sessions : "–"}
+                  {build.expired ? "–" : build.sessions > 0 ? build.sessions : "–"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {build.crashes > 0 ? build.crashes : "–"}
+                  {build.expired ? "–" : build.crashes > 0 ? build.crashes : "–"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-muted-foreground">
                   {formatDate(build.uploadedDate)}
