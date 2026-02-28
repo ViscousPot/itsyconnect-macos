@@ -17,6 +17,7 @@ function hasProcessingScreenshots(sets: AscScreenshotSet[]): boolean {
 
 interface UseScreenshotSetsResult {
   screenshotSets: AscScreenshotSet[];
+  setScreenshotSets: React.Dispatch<React.SetStateAction<AscScreenshotSet[]>>;
   loading: boolean;
   refresh: () => Promise<void>;
 }
@@ -84,5 +85,5 @@ export function useScreenshotSets(
     return () => clearInterval(timer);
   }, [screenshotSets, fetchSets]);
 
-  return { screenshotSets, loading, refresh };
+  return { screenshotSets, setScreenshotSets, loading, refresh };
 }

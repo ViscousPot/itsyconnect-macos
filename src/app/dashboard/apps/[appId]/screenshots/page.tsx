@@ -596,6 +596,7 @@ export default function ScreenshotsPage() {
 
   const {
     screenshotSets: rawSets,
+    setScreenshotSets: setRawSets,
     loading: ssLoading,
     refresh,
   } = useScreenshotSets(appId, versionId, localizationId);
@@ -688,6 +689,7 @@ export default function ScreenshotsPage() {
     localizationId,
     refresh,
     screenshotSets,
+    setScreenshotSets: setRawSets,
   });
 
   async function createLocalization(locale: string) {

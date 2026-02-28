@@ -12,6 +12,7 @@ interface UseScreenshotOperationsOptions {
   localizationId: string;
   refresh: () => Promise<void>;
   screenshotSets: AscScreenshotSet[];
+  setScreenshotSets: React.Dispatch<React.SetStateAction<AscScreenshotSet[]>>;
 }
 
 export function useScreenshotOperations({
@@ -19,6 +20,7 @@ export function useScreenshotOperations({
   localizationId,
   refresh,
   screenshotSets,
+  setScreenshotSets,
 }: UseScreenshotOperationsOptions) {
   const [uploadingSetIds, setUploadingSetIds] = useState<Set<string>>(
     new Set(),
@@ -87,6 +89,14 @@ export function useScreenshotOperations({
       const oldIndex = ids.indexOf(active.id as string);
       const newIndex = ids.indexOf(over.id as string);
       const newOrder = arrayMove(ids, oldIndex, newIndex);
+      const reorderedScreenshots = arrayMove(set.screenshots, oldIndex, newIndex);
+
+      // Optimistic update
+      setScreenshotSets((prev) =>
+        prev.map((s) =>
+          s.id === setId ? { ...s, screenshots: reorderedScreenshots } : s,
+        ),
+      );
 
       try {
         await apiFetch(`${apiBase}/reorder`, {
@@ -94,14 +104,19 @@ export function useScreenshotOperations({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ setId, screenshotIds: newOrder }),
         });
-        await refresh();
       } catch (err) {
+        // Revert on failure
+        setScreenshotSets((prev) =>
+          prev.map((s) =>
+            s.id === setId ? { ...s, screenshots: set.screenshots } : s,
+          ),
+        );
         toast.error(
           err instanceof Error ? err.message : "Failed to reorder screenshots",
         );
       }
     },
-    [apiBase, refresh, screenshotSets],
+    [apiBase, screenshotSets, setScreenshotSets],
   );
 
   const handleAddVariant = useCallback(
