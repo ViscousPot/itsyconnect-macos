@@ -5,6 +5,7 @@ import { aiSettings } from "@/db/schema";
 import { encrypt } from "@/lib/encryption";
 import { ulid } from "@/lib/ulid";
 import { eq } from "drizzle-orm";
+import { validateApiKey } from "@/lib/ai/provider-factory";
 
 export async function GET() {
   const settings = db
@@ -46,6 +47,12 @@ export async function PUT(request: Request) {
   const { provider, modelId, apiKey } = parsed.data;
 
   if (apiKey) {
+    // Validate the key before saving
+    const validationError = await validateApiKey(provider, modelId, apiKey);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 422 });
+    }
+
     // New key: replace everything
     db.delete(aiSettings).run();
     const encrypted = encrypt(apiKey);

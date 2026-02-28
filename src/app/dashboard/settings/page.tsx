@@ -1,8 +1,20 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Plugs,
   Trash,
@@ -22,12 +34,16 @@ interface Credential {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [credential, setCredential] = useState<Credential | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [testStatus, setTestStatus] = useState<
     "idle" | "testing" | "ok" | "error"
   >("idle");
+  const [editingVendorId, setEditingVendorId] = useState(false);
+  const [vendorIdValue, setVendorIdValue] = useState("");
+  const [savingVendorId, setSavingVendorId] = useState(false);
 
   const fetchCredential = useCallback(async () => {
     const res = await fetch("/api/settings/credentials");
@@ -59,6 +75,34 @@ export default function SettingsPage() {
     }
   }
 
+  function startEditVendorId() {
+    setVendorIdValue(credential?.vendorId ?? "");
+    setEditingVendorId(true);
+  }
+
+  async function saveVendorId() {
+    setSavingVendorId(true);
+    try {
+      const res = await fetch("/api/settings/credentials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vendorId: vendorIdValue.trim() || undefined }),
+      });
+      if (res.ok) {
+        setCredential((prev) =>
+          prev ? { ...prev, vendorId: vendorIdValue.trim() || null } : prev,
+        );
+        setEditingVendorId(false);
+        toast.success("Vendor ID saved");
+      } else {
+        toast.error("Failed to save");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+    setSavingVendorId(false);
+  }
+
   async function handleDelete() {
     if (!credential) return;
 
@@ -66,9 +110,7 @@ export default function SettingsPage() {
       method: "DELETE",
     });
 
-    setCredential(null);
-    setShowForm(true);
-    toast.success("Credential deleted");
+    router.push("/setup");
   }
 
   if (loading) {
@@ -97,15 +139,48 @@ export default function SettingsPage() {
 
           <section className="space-y-2">
             <h3 className="section-title">Vendor ID</h3>
-            <p className="text-sm font-mono">
-              {credential.vendorId || <span className="text-muted-foreground font-sans">Not set</span>}
-            </p>
+            {editingVendorId ? (
+              <div className="flex items-center gap-2 max-w-xs">
+                <Input
+                  value={vendorIdValue}
+                  onChange={(e) => setVendorIdValue(e.target.value)}
+                  placeholder="XXXXXXXX"
+                  className="font-mono text-sm"
+                  autoFocus
+                />
+                <Button size="sm" onClick={saveVendorId} disabled={savingVendorId}>
+                  {savingVendorId ? <Spinner className="size-3" /> : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingVendorId(false)}
+                  disabled={savingVendorId}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-mono">
+                  {credential.vendorId || <span className="text-muted-foreground font-sans">Not set</span>}
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground text-xs h-auto py-0.5 px-1.5"
+                  onClick={startEditVendorId}
+                >
+                  {credential.vendorId ? "Edit" : "Set"}
+                </Button>
+              </div>
+            )}
           </section>
 
           <section className="space-y-2">
             <h3 className="section-title">Private key</h3>
             <p className="text-sm text-muted-foreground">
-              Stored encrypted on the server
+              Stored encrypted on this device
             </p>
           </section>
 
@@ -124,10 +199,29 @@ export default function SettingsPage() {
             >
               Replace credentials
             </Button>
-            <Button variant="ghost" onClick={handleDelete}>
-              <Trash size={16} />
-              Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost">
+                  <Trash size={16} />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete credentials?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove your App Store Connect credentials and all cached app data.
+                    You will need to set up the app again from scratch.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             {testStatus === "ok" && (
               <span className="flex items-center gap-1.5 text-sm text-green-600">
                 <CheckCircle size={16} weight="fill" /> Connected

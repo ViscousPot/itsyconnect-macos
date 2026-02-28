@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { ascCredentials } from "@/db/schema";
+import { ascCredentials, aiSettings, cacheEntries } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { encrypt } from "@/lib/encryption";
 import { ulid } from "@/lib/ulid";
@@ -70,6 +70,42 @@ export async function POST(request: Request) {
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
+const patchSchema = z.object({
+  vendorId: z.string().trim().optional(),
+});
+
+export async function PATCH(request: Request) {
+  const body = await request.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = patchSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.issues },
+      { status: 400 },
+    );
+  }
+
+  const cred = db
+    .select({ id: ascCredentials.id })
+    .from(ascCredentials)
+    .where(eq(ascCredentials.isActive, true))
+    .get();
+
+  if (!cred) {
+    return NextResponse.json({ error: "No active credentials" }, { status: 404 });
+  }
+
+  db.update(ascCredentials)
+    .set({ vendorId: parsed.data.vendorId || null })
+    .where(eq(ascCredentials.id, cred.id))
+    .run();
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -79,6 +115,10 @@ export async function DELETE(request: Request) {
   }
 
   db.delete(ascCredentials).where(eq(ascCredentials.id, id)).run();
+
+  // Clear all cached data and AI settings so the app resets to a clean state
+  db.delete(cacheEntries).run();
+  db.delete(aiSettings).run();
 
   return NextResponse.json({ ok: true });
 }

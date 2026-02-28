@@ -1,4 +1,5 @@
 import type { LanguageModel } from "ai";
+import { generateText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
@@ -51,5 +52,41 @@ export function createLanguageModel(
     }
     default:
       throw new Error(`Unknown AI provider: ${provider}`);
+  }
+}
+
+/**
+ * Validate an API key by making a minimal test call to the provider.
+ * Returns null if valid, or an error message string if invalid.
+ */
+export async function validateApiKey(
+  provider: string,
+  modelId: string,
+  apiKey: string,
+): Promise<string | null> {
+  try {
+    const model = createLanguageModel(provider, modelId, apiKey);
+    await generateText({
+      model,
+      prompt: "Say hi",
+      maxOutputTokens: 1,
+    });
+    return null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (/401|unauthorized|invalid.*key|invalid.*api|incorrect.*key|authentication/i.test(message)) {
+      return "Invalid API key";
+    }
+    if (/403|forbidden|permission/i.test(message)) {
+      return "API key lacks required permissions";
+    }
+    if (/404|not.found|model/i.test(message)) {
+      return "Model not found – check your provider and model selection";
+    }
+    if (/429|rate.limit|quota/i.test(message)) {
+      // Rate limited but key is valid
+      return null;
+    }
+    return `API key validation failed: ${message}`;
   }
 }

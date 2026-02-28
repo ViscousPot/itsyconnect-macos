@@ -20,6 +20,7 @@ import {
   Lock,
   MagicWand,
   Package,
+  ChartLine,
   XCircle,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
@@ -27,12 +28,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { AI_PROVIDERS } from "@/lib/ai-providers";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const TOTAL_STEPS = 3;
+const WIZARD_STEPS = 3;
 
 export default function SetupPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [step, setStep] = useState(1);
+  // step 0 = welcome, steps 1–3 = wizard
+  const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -52,10 +54,9 @@ export default function SetupPage() {
       });
   }, [router]);
 
-  // Step 2 – ASC credentials
+  // Step 1 – ASC credentials
   const [issuerId, setIssuerId] = useState("");
   const [keyId, setKeyId] = useState("");
-  const [vendorId, setVendorId] = useState("");
   const [keyIdFromFile, setKeyIdFromFile] = useState(false);
   const [privateKey, setPrivateKey] = useState("");
   const [keyError, setKeyError] = useState("");
@@ -64,9 +65,12 @@ export default function SetupPage() {
   >("idle");
   const [testError, setTestError] = useState("");
 
+  // Step 2 – Vendor ID
+  const [vendorId, setVendorId] = useState("");
+
   // Step 3 – AI
   const [providerId, setProviderId] = useState("anthropic");
-  const [modelId, setModelId] = useState("claude-sonnet-4-20250514");
+  const [modelId, setModelId] = useState("claude-sonnet-4-6");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
 
@@ -156,8 +160,8 @@ export default function SetupPage() {
   }
 
   function canAdvance(): boolean {
-    if (step === 1) return true; // Welcome splash – always can advance
-    if (step === 2) {
+    if (step === 0) return true;
+    if (step === 1) {
       return (
         issuerId.trim().length > 0 &&
         keyId.trim().length > 0 &&
@@ -213,7 +217,7 @@ export default function SetupPage() {
   }
 
   function handleNext() {
-    if (step < TOTAL_STEPS) {
+    if (step < WIZARD_STEPS) {
       setStep(step + 1);
     } else {
       handleSubmit();
@@ -221,6 +225,8 @@ export default function SetupPage() {
   }
 
   if (!ready) return null;
+
+  const isWelcome = step === 0;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
@@ -232,96 +238,89 @@ export default function SetupPage() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            {step === 1 && <Package size={32} weight="fill" />}
-            {step === 2 && <AppStoreLogoIcon size={32} weight="fill" />}
+            {step === 0 && <Package size={32} weight="fill" />}
+            {step === 1 && <AppStoreLogoIcon size={32} weight="fill" />}
+            {step === 2 && <ChartLine size={32} weight="fill" />}
             {step === 3 && <MagicWand size={32} weight="fill" />}
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {step === 1 && "Welcome to Itsyconnect"}
-            {step === 2 && "Set up App Store Connect"}
-            {step === 3 && "Set up AI"}
+            {step === 0 && "Welcome to Itsyconnect"}
+            {step === 1 && "App Store Connect"}
+            {step === 2 && "Sales and trends"}
+            {step === 3 && "AI assistant"}
           </h1>
           <p className="text-sm text-muted-foreground text-center">
-            {step === 1 && "Let\u2019s get you set up."}
+            {step === 0 && "Better App Store Connect."}
+            {step === 1 &&
+              "Set up to manage apps, versions, and metadata."}
+            {step === 2 &&
+              "Required for sales and financial reports. You can add it later in settings."}
             {step === 3 &&
-              "Add an API key to auto-translate app metadata and generate release notes, keywords, and descriptions."}
+              "Add an API key to auto-translate app metadata, generate keywords, and improve descriptions."}
           </p>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full transition-all ${
-                i + 1 === step
-                  ? "w-8 bg-primary"
-                  : i + 1 < step
-                    ? "w-4 bg-primary/40"
-                    : "w-4 bg-muted"
-              }`}
-            />
-          ))}
-        </div>
+        {/* Step indicator (only for wizard steps 1–3) */}
+        {!isWelcome && (
+          <div className="flex items-center justify-center gap-2">
+            {Array.from({ length: WIZARD_STEPS }, (_, i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${
+                  i + 1 === step
+                    ? "w-8 bg-primary"
+                    : i + 1 < step
+                      ? "w-4 bg-primary/40"
+                      : "w-4 bg-muted"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
-        {/* Step 1 – welcome */}
-        {step === 1 && (
+        {/* Welcome */}
+        {step === 0 && (
           <div className="space-y-4">
-            <ul className="space-y-3 text-sm text-muted-foreground">
+            <ul className="flex flex-col items-start gap-3 text-sm text-muted-foreground w-fit mx-auto">
               <li className="flex items-start gap-2">
-                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-green-600" />
                 Manage apps, versions, and metadata across all platforms
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-green-600" />
                 TestFlight builds, beta groups, and testers in one place
               </li>
               <li className="flex items-start gap-2">
-                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                <CheckCircle size={16} weight="fill" className="mt-0.5 shrink-0 text-green-600" />
                 AI-powered translations and copywriting (optional)
               </li>
               <li className="flex items-start gap-2">
-                <Lock size={16} weight="fill" className="mt-0.5 shrink-0 text-primary" />
+                <Lock size={16} weight="fill" className="mt-0.5 shrink-0 text-green-600" />
                 All data stays on your machine, encrypted at rest
               </li>
             </ul>
           </div>
         )}
 
-        {/* Step 2 – ASC credentials */}
-        {step === 2 && (
+        {/* Step 1 – ASC credentials */}
+        {step === 1 && (
           <div className="space-y-4">
-            {/* Instructions */}
             <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
               <div className="flex items-start gap-2">
                 <Info size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
-                <div className="space-y-1.5 text-xs text-muted-foreground">
-                  <p>
-                    Go to{" "}
-                    <a
-                      href="https://appstoreconnect.apple.com/access/integrations/api"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      App Store Connect &rarr; Integrations &rarr; Team keys
-                    </a>
-                    {" "}and generate a key with <strong>Admin</strong> access.
-                    Download the .p8 file and copy the Issuer ID shown on the page.
-                  </p>
-                  <p>
-                    For <strong>Vendor ID</strong>, go to{" "}
-                    <a
-                      href="https://appstoreconnect.apple.com/itc/payments_and_financial_reports"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline-offset-4 hover:underline"
-                    >
-                      Payments and financial reports
-                    </a>
-                    {" "}&ndash; it&rsquo;s the number shown in the top-left corner.
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Go to{" "}
+                  <a
+                    href="https://appstoreconnect.apple.com/access/integrations/api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    App Store Connect &rarr; Integrations &rarr; Team keys
+                  </a>
+                  {" "}and generate a key with <strong>Admin</strong> access.
+                  Download the .p8 file and copy the Issuer ID shown on the page.
+                </p>
               </div>
             </div>
 
@@ -400,6 +399,30 @@ export default function SetupPage() {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step 2 – Vendor ID */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
+              <div className="flex items-start gap-2">
+                <Info size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  Go to{" "}
+                  <a
+                    href="https://appstoreconnect.apple.com/itc/payments_and_financial_reports"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    App Store Connect &rarr; Payments and financial reports
+                  </a>
+                  {" "}&ndash; the Vendor ID is the number shown in the top-left corner of the page.
+                </p>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">
                 Vendor ID{" "}
@@ -410,12 +433,9 @@ export default function SetupPage() {
                 onChange={(e) => setVendorId(e.target.value)}
                 placeholder="XXXXXXXX"
                 className="font-mono text-sm"
+                autoFocus
               />
-              <p className="text-xs text-muted-foreground">
-                Required for sales and financial reports. You can add it later in settings.
-              </p>
             </div>
-
           </div>
         )}
 
@@ -477,15 +497,12 @@ export default function SetupPage() {
                   {showKey ? <EyeSlash size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                You can add this later in settings.
-              </p>
             </div>
           </div>
         )}
 
         {/* Navigation */}
-        <div className="flex items-center justify-end gap-2">
+        <div className={`flex items-center gap-2 ${isWelcome ? "justify-center" : "justify-end"}`}>
           {step > 1 && (
             <Button
               variant="ghost"
@@ -504,9 +521,9 @@ export default function SetupPage() {
                 <Spinner />
                 Setting up...
               </>
-            ) : step === TOTAL_STEPS ? (
+            ) : step === WIZARD_STEPS ? (
               "Finish"
-            ) : step === 1 ? (
+            ) : step === 0 ? (
               "Get started"
             ) : (
               "Continue"

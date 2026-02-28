@@ -5,6 +5,7 @@ import { ascCredentials, aiSettings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { encrypt } from "@/lib/encryption";
 import { ulid } from "@/lib/ulid";
+import { validateApiKey } from "@/lib/ai/provider-factory";
 
 const setupSchema = z.object({
   // ASC credentials – required
@@ -59,6 +60,14 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
 
+  // Validate AI key before saving anything
+  if (data.aiProvider && data.aiModelId && data.aiApiKey) {
+    const aiValidationError = await validateApiKey(data.aiProvider, data.aiModelId, data.aiApiKey);
+    if (aiValidationError) {
+      return NextResponse.json({ error: aiValidationError }, { status: 422 });
+    }
+  }
+
   // Store ASC credentials
   const encrypted = encrypt(data.privateKey);
   db.insert(ascCredentials)
@@ -74,7 +83,7 @@ export async function POST(request: Request) {
     })
     .run();
 
-  // Store AI settings if provided
+  // Store AI settings (already validated above)
   if (data.aiProvider && data.aiModelId && data.aiApiKey) {
     const aiEncrypted = encrypt(data.aiApiKey);
     db.insert(aiSettings)
