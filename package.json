@@ -19,11 +19,17 @@
     "electron:make:mas": "npm run electron:compile && next build && npm run electron:prepare && electron-forge make --targets=@electron-forge/maker-pkg --platform=mas"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.49",
+    "@ai-sdk/google": "^3.0.33",
+    "@ai-sdk/mistral": "^3.0.20",
+    "@ai-sdk/openai": "^3.0.36",
+    "@ai-sdk/xai": "^3.0.59",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
     "@phosphor-icons/react": "^2.1.10",
+    "ai": "^6.0.104",
     "appstore-connect-sdk": "^2.0.0",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",

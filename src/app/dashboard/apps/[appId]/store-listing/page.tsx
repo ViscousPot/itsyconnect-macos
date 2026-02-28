@@ -30,6 +30,9 @@ import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
 import { useSubmissionChecklist } from "@/lib/submission-checklist-context";
 import { useLocaleManagement } from "@/lib/hooks/use-locale-management";
 import { apiFetch } from "@/lib/api-fetch";
+import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
+import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
+import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
 
 
 interface LocaleFields {
@@ -101,8 +104,40 @@ export default function StoreListingPage() {
 
   const current = localeData[selectedLocale] ?? emptyLocaleFields();
 
+  const wand: MagicWandLocaleProps = {
+    locale: selectedLocale,
+    baseLocale: locales[0] ?? "",
+    localeData,
+    appName: app?.name,
+  };
+
   const { report: reportChecklist } = useSubmissionChecklist();
   const { setDirty, registerSave, setValidationErrors } = useFormDirty();
+
+  const bulkFields: BulkField[] = [
+    { key: "description", label: "Description", charLimit: FIELD_LIMITS.description },
+    { key: "keywords", label: "Keywords", charLimit: FIELD_LIMITS.keywords },
+    { key: "whatsNew", label: "What's new", charLimit: FIELD_LIMITS.whatsNew },
+    { key: "promotionalText", label: "Promotional text", charLimit: FIELD_LIMITS.promotionalText },
+  ];
+
+  const [bulkMode, setBulkMode] = useState<"translate" | "copy" | null>(null);
+
+  function handleBulkApply(updates: Record<string, Record<string, string>>) {
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      for (const [locale, fields] of Object.entries(updates)) {
+        next[locale] = { ...next[locale], ...fields } as LocaleFields;
+      }
+      return next;
+    });
+    setDirty(true);
+    toast.success(
+      bulkMode === "translate"
+        ? "Translations applied to all locales"
+        : "Copied to all locales",
+    );
+  }
   const [releaseType, setReleaseType] = useState("manually");
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(undefined);
   const [phasedRelease, setPhasedRelease] = useState(false);
@@ -386,6 +421,8 @@ export default function StoreListingPage() {
     onLocaleAdd: handleAddLocale,
     onLocalesAdd: handleBulkAddLocales,
     onLocaleDelete: handleDeleteLocale,
+    onBulkTranslate: () => setBulkMode("translate"),
+    onBulkCopy: () => setBulkMode("copy"),
     section: "store-listing",
     otherSectionLocales,
     readOnly,
@@ -455,7 +492,16 @@ export default function StoreListingPage() {
           <>
             {/* What's new */}
             <section className="space-y-2">
-              <h3 className="section-title">What&apos;s new{localeTag}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="section-title">What&apos;s new{localeTag}</h3>
+                <MagicWandButton
+                  value={current.whatsNew}
+                  onChange={(v) => updateField("whatsNew", v)}
+                  {...wandProps(wand, "whatsNew")}
+                  charLimit={FIELD_LIMITS.whatsNew}
+                  disabled={readOnly}
+                />
+              </div>
               <Card className="gap-0 py-0">
                 <CardContent className="px-5 py-4">
                   <Textarea
@@ -477,7 +523,15 @@ export default function StoreListingPage() {
 
             {/* Promotional text – editable anytime per ASC rules */}
             <section className="space-y-2">
-              <h3 className="section-title">Promotional text{localeTag}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="section-title">Promotional text{localeTag}</h3>
+                <MagicWandButton
+                  value={current.promotionalText}
+                  onChange={(v) => updateField("promotionalText", v)}
+                  {...wandProps(wand, "promotionalText")}
+                  charLimit={FIELD_LIMITS.promotionalText}
+                />
+              </div>
               <Card className="gap-0 py-0">
                 <CardContent className="px-5 py-4">
                   <Textarea
@@ -500,7 +554,16 @@ export default function StoreListingPage() {
 
             {/* Description */}
             <section className="space-y-2">
-              <h3 className="section-title">Description{localeTag}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="section-title">Description{localeTag}</h3>
+                <MagicWandButton
+                  value={current.description}
+                  onChange={(v) => updateField("description", v)}
+                  {...wandProps(wand, "description")}
+                  charLimit={FIELD_LIMITS.description}
+                  disabled={readOnly}
+                />
+              </div>
               <Card className="gap-0 py-0">
                 <CardContent className="px-5 py-4">
                   <Textarea
@@ -522,7 +585,16 @@ export default function StoreListingPage() {
 
             {/* Keywords */}
             <section className="space-y-2">
-              <h3 className="section-title">Keywords{localeTag}</h3>
+              <div className="flex items-center gap-1">
+                <h3 className="section-title">Keywords{localeTag}</h3>
+                <MagicWandButton
+                  value={current.keywords}
+                  onChange={(v) => updateField("keywords", v)}
+                  {...wandProps(wand, "keywords")}
+                  charLimit={FIELD_LIMITS.keywords}
+                  disabled={readOnly}
+                />
+              </div>
               <Card className="gap-0 py-0">
                 <CardContent className="px-5 py-4">
                   <Input
@@ -580,6 +652,18 @@ export default function StoreListingPage() {
 
         {/* Build */}
         <BuildSection version={selectedVersion} />
+
+        <BulkAIDialog
+          open={bulkMode !== null}
+          onOpenChange={(open) => { if (!open) setBulkMode(null); }}
+          mode={bulkMode ?? "copy"}
+          targetLocale={selectedLocale}
+          primaryLocale={primaryLocale}
+          localeData={localeData}
+          fields={bulkFields}
+          appName={app?.name}
+          onApply={handleBulkApply}
+        />
 
         {/* Release settings */}
         <section className="space-y-6">

@@ -27,6 +27,9 @@ import { CharCount } from "@/components/char-count";
 import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
 import { useLocaleManagement } from "@/lib/hooks/use-locale-management";
 import { apiFetch } from "@/lib/api-fetch";
+import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
+import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
+import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
 
 const SORTED_CATEGORIES = Object.keys(CATEGORIES).sort((a, b) =>
   CATEGORIES[a].localeCompare(CATEGORIES[b]),
@@ -116,7 +119,37 @@ export default function AppDetailsPage() {
 
   const current = localeData[selectedLocale] ?? emptyLocaleFields();
 
+  const wand: MagicWandLocaleProps = {
+    locale: selectedLocale,
+    baseLocale: locales[0] ?? "",
+    localeData,
+    appName: app?.name,
+  };
+
   const { setDirty, registerSave, setValidationErrors } = useFormDirty();
+
+  const bulkFields: BulkField[] = [
+    { key: "name", label: "Name", charLimit: FIELD_LIMITS.name },
+    { key: "subtitle", label: "Subtitle", charLimit: FIELD_LIMITS.subtitle },
+  ];
+
+  const [bulkMode, setBulkMode] = useState<"translate" | "copy" | null>(null);
+
+  function handleBulkApply(updates: Record<string, Record<string, string>>) {
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      for (const [locale, fields] of Object.entries(updates)) {
+        next[locale] = { ...next[locale], ...fields } as AppInfoLocaleFields;
+      }
+      return next;
+    });
+    setDirty(true);
+    toast.success(
+      bulkMode === "translate"
+        ? "Translations applied to all locales"
+        : "Copied to all locales",
+    );
+  }
 
   // Track original locale → localization ID mapping for diffing saves
   const originalLocaleIdsRef = useRef<Record<string, string>>({});
@@ -365,6 +398,8 @@ export default function AppDetailsPage() {
     onLocaleAdd: handleAddLocale,
     onLocalesAdd: handleBulkAddLocales,
     onLocaleDelete: handleDeleteLocale,
+    onBulkTranslate: () => setBulkMode("translate"),
+    onBulkCopy: () => setBulkMode("copy"),
     section: "details",
     otherSectionLocales,
   });
@@ -461,7 +496,15 @@ export default function AppDetailsPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm text-muted-foreground">Subtitle{localeTag}</label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-sm text-muted-foreground">Subtitle{localeTag}</label>
+                    <MagicWandButton
+                      value={current.subtitle}
+                      onChange={(v) => updateField("subtitle", v)}
+                      {...wandProps(wand, "subtitle")}
+                      charLimit={FIELD_LIMITS.subtitle}
+                    />
+                  </div>
                   <CharCount value={current.subtitle} limit={FIELD_LIMITS.subtitle} />
                 </div>
                 <Input
@@ -509,6 +552,18 @@ export default function AppDetailsPage() {
           </section>
         </>
       )}
+
+      <BulkAIDialog
+        open={bulkMode !== null}
+        onOpenChange={(open) => { if (!open) setBulkMode(null); }}
+        mode={bulkMode ?? "copy"}
+        targetLocale={selectedLocale}
+        primaryLocale={primaryLocale}
+        localeData={localeData}
+        fields={bulkFields}
+        appName={app?.name}
+        onApply={handleBulkApply}
+      />
 
       {/* Categories */}
       <section className="space-y-2">

@@ -17,7 +17,7 @@ import { AI_PROVIDERS } from "@/lib/ai-providers";
 
 export default function AISettingsPage() {
   const [providerId, setProviderId] = useState("anthropic");
-  const [modelId, setModelId] = useState("claude-sonnet-4-20250514");
+  const [modelId, setModelId] = useState("claude-sonnet-4-6");
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [hasExistingKey, setHasExistingKey] = useState(false);

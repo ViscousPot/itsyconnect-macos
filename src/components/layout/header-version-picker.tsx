@@ -328,10 +328,10 @@ export function HeaderVersionActions() {
 
   const platforms = getVersionPlatforms(versions);
 
-  // Cmd+Enter / Ctrl+Enter to save
+  // Cmd+S / Ctrl+S to save
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && isDirty && !isSaving) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s" && isDirty && !isSaving) {
         e.preventDefault();
         onSave();
       }
@@ -412,7 +412,7 @@ export function HeaderVersionActions() {
           {isSaving && <Spinner className="size-3.5" />}
           {isSaving ? "Saving\u2026" : "Save"}
           {!isSaving && (
-            <kbd className="ml-1 text-[10px] opacity-50 font-sans">&#8984;&#9166;</kbd>
+            <kbd className="ml-1 text-[10px] opacity-50 font-sans">&#8984;S</kbd>
           )}
         </Button>
       )}

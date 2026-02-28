@@ -16,9 +16,9 @@ export const AI_PROVIDERS: AIProvider[] = [
     name: "Anthropic",
     envVar: "ANTHROPIC_API_KEY",
     models: [
-      { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
+      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
       { id: "claude-haiku-4-5", name: "Claude Haiku 4.5" },
-      { id: "claude-opus-4-5", name: "Claude Opus 4.5" },
+      { id: "claude-opus-4-6", name: "Claude Opus 4.6" },
     ],
   },
   {
@@ -26,10 +26,9 @@ export const AI_PROVIDERS: AIProvider[] = [
     name: "OpenAI",
     envVar: "OPENAI_API_KEY",
     models: [
-      { id: "gpt-4o", name: "GPT-4o" },
-      { id: "gpt-4o-mini", name: "GPT-4o Mini" },
-      { id: "gpt-4.1", name: "GPT-4.1" },
-      { id: "gpt-4.1-mini", name: "GPT-4.1 Mini" },
+      { id: "gpt-5.2", name: "GPT-5.2" },
+      { id: "gpt-5", name: "GPT-5" },
+      { id: "gpt-5-mini", name: "GPT-5 Mini" },
     ],
   },
   {
@@ -37,9 +36,10 @@ export const AI_PROVIDERS: AIProvider[] = [
     name: "Google",
     envVar: "GOOGLE_GENERATIVE_AI_API_KEY",
     models: [
+      { id: "gemini-3-pro-preview", name: "Gemini 3 Pro" },
+      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash" },
       { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
       { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-      { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
     ],
   },
   {
@@ -47,9 +47,9 @@ export const AI_PROVIDERS: AIProvider[] = [
     name: "xAI",
     envVar: "XAI_API_KEY",
     models: [
+      { id: "grok-4-1", name: "Grok 4.1" },
+      { id: "grok-4", name: "Grok 4" },
       { id: "grok-3", name: "Grok 3" },
-      { id: "grok-3-fast", name: "Grok 3 Fast" },
-      { id: "grok-3-mini", name: "Grok 3 Mini" },
     ],
   },
   {
@@ -58,6 +58,7 @@ export const AI_PROVIDERS: AIProvider[] = [
     envVar: "MISTRAL_API_KEY",
     models: [
       { id: "mistral-large-latest", name: "Mistral Large" },
+      { id: "mistral-medium-latest", name: "Mistral Medium" },
       { id: "mistral-small-latest", name: "Mistral Small" },
     ],
   },
