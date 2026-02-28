@@ -33,6 +33,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
 import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
 import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
+import { BulkAllAIDialog } from "@/components/bulk-all-ai-dialog";
 
 
 interface LocaleFields {
@@ -122,7 +123,7 @@ export default function StoreListingPage() {
   ];
 
   const [bulkMode, setBulkMode] = useState<"translate" | "copy" | null>(null);
-  const [bulkAllMode, setBulkAllMode] = useState<"translate" | "copy" | null>(null);
+  const [bulkAllMode, setBulkAllMode] = useState<{ mode: "translate" | "copy"; field?: string } | null>(null);
 
   function handleBulkApply(updates: Record<string, Record<string, string>>) {
     setLocaleData((prev) => {
@@ -446,8 +447,8 @@ export default function StoreListingPage() {
     onLocaleDelete: handleDeleteLocale,
     onBulkTranslate: () => setBulkMode("translate"),
     onBulkCopy: () => setBulkMode("copy"),
-    onBulkTranslateAll: () => setBulkAllMode("translate"),
-    onBulkCopyAll: () => setBulkAllMode("copy"),
+    onBulkTranslateAll: () => setBulkAllMode({ mode: "translate" }),
+    onBulkCopyAll: () => setBulkAllMode({ mode: "copy" }),
     section: "store-listing",
     otherSectionLocales,
     readOnly,
@@ -525,6 +526,7 @@ export default function StoreListingPage() {
                   {...wandProps(wand, "whatsNew")}
                   charLimit={FIELD_LIMITS.whatsNew}
                   disabled={readOnly}
+                  onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "whatsNew" })}
                 />
               </div>
               <Card className="gap-0 py-0">
@@ -555,6 +557,7 @@ export default function StoreListingPage() {
                   onChange={(v) => updateField("promotionalText", v)}
                   {...wandProps(wand, "promotionalText")}
                   charLimit={FIELD_LIMITS.promotionalText}
+                  onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "promotionalText" })}
                 />
               </div>
               <Card className="gap-0 py-0">
@@ -587,6 +590,7 @@ export default function StoreListingPage() {
                   {...wandProps(wand, "description")}
                   charLimit={FIELD_LIMITS.description}
                   disabled={readOnly}
+                  onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "description" })}
                 />
               </div>
               <Card className="gap-0 py-0">
@@ -618,6 +622,7 @@ export default function StoreListingPage() {
                   {...wandProps(wand, "keywords")}
                   charLimit={FIELD_LIMITS.keywords}
                   disabled={readOnly}
+                  onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "keywords" })}
                 />
               </div>
               <Card className="gap-0 py-0">
@@ -686,6 +691,17 @@ export default function StoreListingPage() {
           primaryLocale={primaryLocale}
           localeData={localeData}
           fields={bulkFields}
+          appName={app?.name}
+          onApply={handleBulkApply}
+        />
+        <BulkAllAIDialog
+          open={bulkAllMode !== null}
+          onOpenChange={(open) => { if (!open) setBulkAllMode(null); }}
+          mode={bulkAllMode?.mode ?? "copy"}
+          primaryLocale={primaryLocale}
+          locales={locales}
+          localeData={localeData}
+          fields={bulkAllMode?.field ? bulkFields.filter((f) => f.key === bulkAllMode.field) : bulkFields}
           appName={app?.name}
           onApply={handleBulkApply}
         />

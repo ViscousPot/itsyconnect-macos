@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,6 +30,8 @@ interface MagicWandButtonProps {
   description?: string;
   /** For keywords: all other locales' keywords for gap analysis. */
   otherLocaleKeywords?: Record<string, string>;
+  /** Callback to open the "translate to all languages" dialog for this field. */
+  onTranslateAll?: () => void;
 }
 
 /** Shared locale props for all MagicWandButtons on a page. */
@@ -90,6 +93,7 @@ export function MagicWandButton({
   disabled,
   description,
   otherLocaleKeywords,
+  onTranslateAll,
 }: MagicWandButtonProps) {
   const { configured } = useAIStatus();
   const [showRequired, setShowRequired] = useState(false);
@@ -214,7 +218,8 @@ export function MagicWandButton({
   const hasKeywordActions = isKeywords;
   const hasTranslateActions = !isBaseLocale && !isKeywords;
   const hasImproveAction = isBaseLocale && !isKeywords;
-  const hasAnyAction = hasKeywordActions || hasTranslateActions || hasImproveAction;
+  const hasTranslateAllAction = !!onTranslateAll;
+  const hasAnyAction = hasKeywordActions || hasTranslateActions || hasImproveAction || hasTranslateAllAction;
 
   // Memoize apiBody to avoid re-triggering the dialog's useEffect
   const compareApiBody = useMemo(() => compare?.apiBody, [compare]);
@@ -234,7 +239,7 @@ export function MagicWandButton({
             {translating ? <Spinner className="size-3.5" /> : <MagicWand size={14} />}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="shadow-none">
           {hasKeywordActions && (
             <>
               <DropdownMenuItem onSelect={handleGenerateKeywords}>
@@ -268,6 +273,20 @@ export function MagicWandButton({
             <DropdownMenuItem onSelect={handleImprove} disabled={!hasValue}>
               Improve…
             </DropdownMenuItem>
+          )}
+          {hasTranslateAllAction && (
+            <>
+              {!isBaseLocale && <DropdownMenuSeparator />}
+              <DropdownMenuItem
+                onSelect={() => {
+                  if (!requireAI()) return;
+                  onTranslateAll!();
+                }}
+                disabled={!hasBaseValue}
+              >
+                Translate from {localeName(baseLocale)} to all languages…
+              </DropdownMenuItem>
+            </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>

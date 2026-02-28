@@ -114,14 +114,14 @@ export function HeaderLocalePicker() {
                 <DropdownMenuItem
                   onSelect={() => requireAI(() => configRef.current?.onBulkTranslateAll?.())}
                 >
-                  Translate from {baseLabel} to all languages…
+                  Translate all fields from {baseLabel} to all languages…
                 </DropdownMenuItem>
               )}
               {config.onBulkCopyAll && (
                 <DropdownMenuItem
                   onSelect={() => configRef.current?.onBulkCopyAll?.()}
                 >
-                  Copy from {baseLabel} to all languages…
+                  Copy all fields from {baseLabel} to all languages…
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

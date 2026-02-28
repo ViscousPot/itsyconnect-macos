@@ -30,6 +30,7 @@ import { apiFetch } from "@/lib/api-fetch";
 import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
 import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
 import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
+import { BulkAllAIDialog } from "@/components/bulk-all-ai-dialog";
 
 const SORTED_CATEGORIES = Object.keys(CATEGORIES).sort((a, b) =>
   CATEGORIES[a].localeCompare(CATEGORIES[b]),
@@ -134,7 +135,7 @@ export default function AppDetailsPage() {
   ];
 
   const [bulkMode, setBulkMode] = useState<"translate" | "copy" | null>(null);
-  const [bulkAllMode, setBulkAllMode] = useState<"translate" | "copy" | null>(null);
+  const [bulkAllMode, setBulkAllMode] = useState<{ mode: "translate" | "copy"; field?: string } | null>(null);
 
   function handleBulkApply(updates: Record<string, Record<string, string>>) {
     setLocaleData((prev) => {
@@ -413,8 +414,8 @@ export default function AppDetailsPage() {
     onLocaleDelete: handleDeleteLocale,
     onBulkTranslate: () => setBulkMode("translate"),
     onBulkCopy: () => setBulkMode("copy"),
-    onBulkTranslateAll: () => setBulkAllMode("translate"),
-    onBulkCopyAll: () => setBulkAllMode("copy"),
+    onBulkTranslateAll: () => setBulkAllMode({ mode: "translate" }),
+    onBulkCopyAll: () => setBulkAllMode({ mode: "copy" }),
     section: "details",
     otherSectionLocales,
   });
@@ -518,6 +519,7 @@ export default function AppDetailsPage() {
                       onChange={(v) => updateField("subtitle", v)}
                       {...wandProps(wand, "subtitle")}
                       charLimit={FIELD_LIMITS.subtitle}
+                      onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "subtitle" })}
                     />
                   </div>
                   <CharCount value={current.subtitle} limit={FIELD_LIMITS.subtitle} />
@@ -576,6 +578,17 @@ export default function AppDetailsPage() {
         primaryLocale={primaryLocale}
         localeData={localeData}
         fields={bulkFields}
+        appName={app?.name}
+        onApply={handleBulkApply}
+      />
+      <BulkAllAIDialog
+        open={bulkAllMode !== null}
+        onOpenChange={(open) => { if (!open) setBulkAllMode(null); }}
+        mode={bulkAllMode?.mode ?? "copy"}
+        primaryLocale={primaryLocale}
+        locales={locales}
+        localeData={localeData}
+        fields={bulkAllMode?.field ? bulkFields.filter((f) => f.key === bulkAllMode.field) : bulkFields}
         appName={app?.name}
         onApply={handleBulkApply}
       />
