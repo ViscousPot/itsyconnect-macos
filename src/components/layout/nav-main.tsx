@@ -61,7 +61,7 @@ function getNavGroups(appId: string): NavGroup[] {
       items: [
         { title: "Builds", href: `${base}/testflight`, icon: Truck },
         { title: "Groups", href: `${base}/testflight/groups`, icon: UsersThree },
-        { title: "Info", href: `${base}/testflight/info`, icon: Info },
+        { title: "Beta app info", href: `${base}/testflight/info`, icon: Info },
         { title: "Feedback", href: `${base}/testflight/feedback`, icon: ChatDots },
       ],
     },

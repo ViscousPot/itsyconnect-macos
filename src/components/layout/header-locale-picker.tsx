@@ -115,8 +115,8 @@ export function HeaderLocalePicker() {
                   onSelect={() => requireAI(() => configRef.current?.onBulkTranslateAll?.())}
                 >
                   {isBaseLocale
-                    ? "Translate all fields to all languages…"
-                    : `Translate all fields from ${baseLabel} to all languages…`}
+                    ? "Translate to all languages…"
+                    : `Translate from ${baseLabel} to all languages…`}
                 </DropdownMenuItem>
               )}
               {config.onBulkCopyAll && (
@@ -124,8 +124,8 @@ export function HeaderLocalePicker() {
                   onSelect={() => configRef.current?.onBulkCopyAll?.()}
                 >
                   {isBaseLocale
-                    ? "Copy all fields to all languages…"
-                    : `Copy all fields from ${baseLabel} to all languages…`}
+                    ? "Copy to all languages…"
+                    : `Copy from ${baseLabel} to all languages…`}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>

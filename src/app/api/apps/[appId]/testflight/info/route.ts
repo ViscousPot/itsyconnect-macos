@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   getBetaAppInfo,
+  createBetaAppLocalization,
+  deleteBetaAppLocalization,
   updateBetaAppLocalization,
   updateBetaAppReviewDetail,
   updateBetaLicenseAgreement,
 } from "@/lib/asc/testflight";
 import { hasCredentials } from "@/lib/asc/client";
-import { cacheGetMeta } from "@/lib/cache";
+import { cacheGetMeta, cacheInvalidatePrefix } from "@/lib/cache";
 import { getMockBetaAppInfo } from "@/lib/mock-testflight";
 
 export async function GET(
@@ -111,5 +113,74 @@ export async function PATCH(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 502 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: Promise<{ appId: string }> },
+) {
+  const { appId } = await params;
+
+  if (!hasCredentials()) {
+    return NextResponse.json({ error: "No ASC credentials" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json() as {
+      locales: Record<string, Record<string, unknown>>;
+      originalLocaleIds: Record<string, string>;
+    };
+
+    const { locales, originalLocaleIds } = body;
+    const errors: string[] = [];
+    const createdIds: Record<string, string> = {};
+
+    const updates: Promise<void>[] = [];
+
+    for (const [locale, fields] of Object.entries(locales)) {
+      const existingId = originalLocaleIds[locale];
+      if (existingId) {
+        // Update existing locale
+        updates.push(
+          updateBetaAppLocalization(existingId, fields as Parameters<typeof updateBetaAppLocalization>[1]).catch((err) => {
+            errors.push(`Update ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      } else {
+        // Create new locale
+        updates.push(
+          createBetaAppLocalization(appId, locale, fields).then((id) => {
+            createdIds[locale] = id;
+          }).catch((err) => {
+            errors.push(`Create ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      }
+    }
+
+    // Delete removed locales
+    for (const [locale, locId] of Object.entries(originalLocaleIds)) {
+      if (!locales[locale]) {
+        updates.push(
+          deleteBetaAppLocalization(locId).catch((err) => {
+            errors.push(`Delete ${locale}: ${err instanceof Error ? err.message : "failed"}`);
+          }),
+        );
+      }
+    }
+
+    await Promise.allSettled(updates);
+
+    cacheInvalidatePrefix("tf-info:");
+
+    if (errors.length > 0) {
+      return NextResponse.json({ ok: false, errors, createdIds }, { status: 207 });
+    }
+
+    return NextResponse.json({ ok: true, errors: [], createdIds });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -116,7 +116,7 @@ export function ReleaseSettings({
         <p className="text-sm font-medium">Phased rollout</p>
         <p className="text-sm text-muted-foreground">
           Gradually roll out to users over 7 days. Only affects automatic
-          updates \u2013 manual downloads get the new version immediately.
+          updates – manual downloads get the new version immediately.
         </p>
         <div className="flex items-center gap-3">
           <Switch

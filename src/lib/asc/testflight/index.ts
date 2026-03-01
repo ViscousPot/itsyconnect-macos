@@ -33,6 +33,8 @@ export {
 } from "./testers";
 export {
   getBetaAppInfo,
+  createBetaAppLocalization,
+  deleteBetaAppLocalization,
   updateBetaAppLocalization,
   updateBetaAppReviewDetail,
   updateBetaLicenseAgreement,

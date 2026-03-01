@@ -79,6 +79,43 @@ export async function getBetaAppInfo(
 
 // ── Beta app info mutations ──────────────────────────────────────
 
+export async function createBetaAppLocalization(
+  appId: string,
+  locale: string,
+  fields: Record<string, unknown>,
+): Promise<string> {
+  // Strip empty strings – ASC rejects them on create
+  const cleaned: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(fields)) {
+    if (v !== "") cleaned[k] = v;
+  }
+  const res = await ascFetch<{ data: { id: string } }>("/v1/betaAppLocalizations", {
+    method: "POST",
+    body: JSON.stringify({
+      data: {
+        type: "betaAppLocalizations",
+        attributes: { locale, ...cleaned },
+        relationships: {
+          app: {
+            data: { type: "apps", id: appId },
+          },
+        },
+      },
+    }),
+  });
+  cacheInvalidatePrefix("tf-info:");
+  return res.data.id;
+}
+
+export async function deleteBetaAppLocalization(
+  locId: string,
+): Promise<void> {
+  await ascFetch(`/v1/betaAppLocalizations/${locId}`, {
+    method: "DELETE",
+  });
+  cacheInvalidatePrefix("tf-info:");
+}
+
 export async function updateBetaAppLocalization(
   locId: string,
   fields: Partial<{

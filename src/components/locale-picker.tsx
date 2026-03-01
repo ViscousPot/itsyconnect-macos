@@ -35,6 +35,7 @@ const SECTION_LABELS: Record<SectionName, string> = {
   "store-listing": "store listing",
   details: "details",
   screenshots: "screenshots",
+  "testflight-info": "TestFlight info",
 };
 
 interface LocalePickerProps {

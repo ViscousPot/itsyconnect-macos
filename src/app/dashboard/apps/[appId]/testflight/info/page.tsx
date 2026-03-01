@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { CircleNotch, ArrowClockwise, FloppyDisk } from "@phosphor-icons/react";
+import { Spinner } from "@/components/ui/spinner";
+import { ArrowClockwise } from "@phosphor-icons/react";
 import { toast } from "sonner";
+import { CharCount } from "@/components/char-count";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import { useRegisterRefresh } from "@/lib/refresh-context";
+import { useApps } from "@/lib/apps-context";
+import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
+import { useLocaleManagement } from "@/lib/hooks/use-locale-management";
+import { localeName, sortLocales } from "@/lib/asc/locale-names";
+import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
+import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
+import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
+import { BulkAllAIDialog } from "@/components/bulk-all-ai-dialog";
 import type {
   TFBetaAppInfo,
   TFBetaAppLocalization,
@@ -18,37 +29,111 @@ import type {
   TFBetaLicenseAgreement,
 } from "@/lib/asc/testflight";
 
-function CharCount({ value, limit }: { value: string; limit?: number }) {
-  const count = value?.length ?? 0;
-  if (!limit) return null;
-  const over = count > limit;
+interface BetaLocaleFields {
+  description: string;
+  feedbackEmail: string;
+  marketingUrl: string;
+  privacyPolicyUrl: string;
+}
 
-  return (
-    <span
-      className={`text-xs tabular-nums ${over ? "font-medium text-destructive" : "text-muted-foreground"}`}
-    >
-      {count}/{limit}
-    </span>
-  );
+function emptyLocaleFields(): BetaLocaleFields {
+  return {
+    description: "",
+    feedbackEmail: "",
+    marketingUrl: "",
+    privacyPolicyUrl: "",
+  };
+}
+
+function buildLocaleData(
+  localizations: TFBetaAppLocalization[],
+): Record<string, BetaLocaleFields> {
+  const data: Record<string, BetaLocaleFields> = {};
+  for (const loc of localizations) {
+    data[loc.locale] = {
+      description: loc.description ?? "",
+      feedbackEmail: loc.feedbackEmail ?? "",
+      marketingUrl: loc.marketingUrl ?? "",
+      privacyPolicyUrl: loc.privacyPolicyUrl ?? "",
+    };
+  }
+  return data;
+}
+
+function buildLocaleIds(
+  localizations: TFBetaAppLocalization[],
+): Record<string, string> {
+  const ids: Record<string, string> = {};
+  for (const loc of localizations) {
+    ids[loc.locale] = loc.id;
+  }
+  return ids;
 }
 
 export default function TestFlightInfoPage() {
   const { appId } = useParams<{ appId: string }>();
+  const searchParams = useSearchParams();
+  const { apps } = useApps();
+  const app = apps.find((a) => a.id === appId);
+  const primaryLocale = app?.primaryLocale ?? "";
 
-  const [info, setInfo] = useState<TFBetaAppInfo | null>(null);
+  const { setDirty, registerSave, registerDiscard } = useFormDirty();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Editable state (initialised from fetched data)
-  const [localization, setLocalization] = useState<TFBetaAppLocalization | null>(null);
+  // Multi-locale state
+  const [localeData, setLocaleData] = useState<Record<string, BetaLocaleFields>>({});
+  const originalLocaleIdsRef = useRef<Record<string, string>>({});
+
+  // Keep a ref to the fetched localizations for discard
+  const fetchedLocalizationsRef = useRef<TFBetaAppLocalization[]>([]);
+
+  const {
+    locales, setLocales,
+    selectedLocale, setSelectedLocale,
+    changeLocale,
+    otherSectionLocales,
+  } = useLocaleManagement({ section: "testflight-info", primaryLocale });
+
+  // Non-localizable state
   const [review, setReview] = useState<TFBetaReviewDetail | null>(null);
   const [licenseText, setLicenseText] = useState("");
   const [licenseAgreement, setLicenseAgreement] = useState<TFBetaLicenseAgreement | null>(null);
 
-  // Saving states
-  const [savingLoc, setSavingLoc] = useState(false);
-  const [savingReview, setSavingReview] = useState(false);
-  const [savingLicense, setSavingLicense] = useState(false);
+  // Original snapshots for non-locale discard
+  const originalReviewRef = useRef<TFBetaReviewDetail | null>(null);
+  const originalLicenseTextRef = useRef("");
+
+  const current = localeData[selectedLocale] ?? emptyLocaleFields();
+
+  const wand: MagicWandLocaleProps = {
+    locale: selectedLocale,
+    baseLocale: locales[0] ?? "",
+    localeData,
+    appName: app?.name,
+  };
+
+  const bulkFields: BulkField[] = [
+    { key: "description", label: "Description", charLimit: 4000 },
+  ];
+
+  const [bulkMode, setBulkMode] = useState<"translate" | "copy" | null>(null);
+  const [bulkAllMode, setBulkAllMode] = useState<{ mode: "translate" | "copy"; field?: string } | null>(null);
+
+  function handleBulkApply(updates: Record<string, Record<string, string>>) {
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      for (const [locale, fields] of Object.entries(updates)) {
+        next[locale] = { ...next[locale], ...fields } as BetaLocaleFields;
+      }
+      return next;
+    });
+    setDirty(true);
+  }
+
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
 
   const fetchData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -62,23 +147,44 @@ export default function TestFlightInfoPage() {
       }
       const data = await res.json();
       const fetchedInfo: TFBetaAppInfo = data.info;
-      setInfo(fetchedInfo);
 
-      // Initialise editable state
-      if (fetchedInfo.localizations.length > 0) {
-        setLocalization({ ...fetchedInfo.localizations[0] });
-      }
-      if (fetchedInfo.reviewDetail) {
-        setReview({ ...fetchedInfo.reviewDetail });
-      }
+      // Build locale data
+      const ld = buildLocaleData(fetchedInfo.localizations);
+      setLocaleData(ld);
+      fetchedLocalizationsRef.current = fetchedInfo.localizations;
+
+      const sorted = sortLocales(Object.keys(ld), primaryLocale);
+      setLocales(sorted);
+
+      // Preserve current locale if still valid, else try URL param, else first
+      setSelectedLocale((prev) => {
+        if (prev && sorted.includes(prev)) return prev;
+        const fromUrl = searchParamsRef.current.get("locale");
+        if (fromUrl && sorted.includes(fromUrl)) return fromUrl;
+        return sorted[0] ?? "";
+      });
+
+      // Snapshot original locale → ID mapping for save diffing
+      originalLocaleIdsRef.current = buildLocaleIds(fetchedInfo.localizations);
+
+      // Non-localizable state
+      const rev = fetchedInfo.reviewDetail ? { ...fetchedInfo.reviewDetail } : null;
+      const licText = fetchedInfo.licenseAgreement?.agreementText ?? "";
+
+      setReview(rev);
       setLicenseAgreement(fetchedInfo.licenseAgreement);
-      setLicenseText(fetchedInfo.licenseAgreement?.agreementText ?? "");
+      setLicenseText(licText);
+
+      originalReviewRef.current = rev ? { ...rev } : null;
+      originalLicenseTextRef.current = licText;
+
+      setDirty(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch info");
     } finally {
       setLoading(false);
     }
-  }, [appId]);
+  }, [appId, primaryLocale, setDirty, setLocales, setSelectedLocale]);
 
   useEffect(() => {
     fetchData();
@@ -87,115 +193,222 @@ export default function TestFlightInfoPage() {
   const handleRefresh = useCallback(() => fetchData(true), [fetchData]);
   useRegisterRefresh({ onRefresh: handleRefresh, busy: loading });
 
-  function updateLocField(field: keyof TFBetaAppLocalization, value: string) {
-    setLocalization((prev) => prev ? { ...prev, [field]: value } : prev);
-  }
+  const updateField = useCallback(
+    (field: keyof BetaLocaleFields, value: string) => {
+      setLocaleData((prev) => ({
+        ...prev,
+        [selectedLocale]: { ...prev[selectedLocale], [field]: value },
+      }));
+      setDirty(true);
+    },
+    [selectedLocale, setDirty],
+  );
 
   function updateReviewField(field: keyof TFBetaReviewDetail, value: string | boolean) {
     setReview((prev) => prev ? { ...prev, [field]: value } : prev);
+    setDirty(true);
   }
 
-  async function saveLocalization() {
-    if (!localization) return;
-    setSavingLoc(true);
-    try {
-      const res = await fetch(`/api/apps/${appId}/testflight/info`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "updateLocalization",
-          localizationId: localization.id,
-          fields: {
-            description: localization.description ?? "",
-            feedbackEmail: localization.feedbackEmail ?? "",
-            marketingUrl: localization.marketingUrl ?? "",
-            privacyPolicyUrl: localization.privacyPolicyUrl ?? "",
-          },
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to save");
-      }
-      toast.success("Beta app information saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSavingLoc(false);
-    }
+  function updateLicenseText(value: string) {
+    setLicenseText(value);
+    setDirty(true);
   }
 
-  async function saveReviewDetail() {
-    if (!review) return;
-    setSavingReview(true);
-    try {
-      const res = await fetch(`/api/apps/${appId}/testflight/info`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "updateReviewDetail",
-          detailId: review.id,
-          fields: {
-            contactFirstName: review.contactFirstName ?? "",
-            contactLastName: review.contactLastName ?? "",
-            contactPhone: review.contactPhone ?? "",
-            contactEmail: review.contactEmail ?? "",
-            demoAccountRequired: review.demoAccountRequired,
-            demoAccountName: review.demoAccountName ?? "",
-            demoAccountPassword: review.demoAccountPassword ?? "",
-            notes: review.notes ?? "",
-          },
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to save");
-      }
-      toast.success("Review information saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSavingReview(false);
-    }
+  // Locale handlers
+  function handleAddLocale(locale: string) {
+    setLocaleData((prev) => {
+      const base = prev[primaryLocale] ?? emptyLocaleFields();
+      const next = { ...prev, [locale]: { ...base } };
+      setLocales(sortLocales(Object.keys(next), primaryLocale));
+      return next;
+    });
+    changeLocale(locale);
+    setDirty(true);
+    toast.success(`Added ${localeName(locale)}`);
   }
 
-  async function saveLicense() {
-    if (!licenseAgreement) return;
-    setSavingLicense(true);
-    try {
-      const res = await fetch(`/api/apps/${appId}/testflight/info`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "updateLicense",
-          agreementId: licenseAgreement.id,
-          agreementText: licenseText,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Failed to save");
+  function handleBulkAddLocales(codes: string[]) {
+    setLocaleData((prev) => {
+      const base = prev[primaryLocale] ?? emptyLocaleFields();
+      const next = { ...prev };
+      for (const code of codes) {
+        if (!next[code]) next[code] = { ...base };
       }
-      toast.success("License agreement saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
-    } finally {
-      setSavingLicense(false);
-    }
+      setLocales(sortLocales(Object.keys(next), primaryLocale));
+      return next;
+    });
+    setDirty(true);
+    toast.success(`Added ${codes.length} locales`);
   }
+
+  function handleDeleteLocale(code: string) {
+    const deletedData = localeData[code];
+    setLocaleData((prev) => {
+      const next = { ...prev };
+      delete next[code];
+      const sorted = sortLocales(Object.keys(next), primaryLocale);
+      setLocales(sorted);
+      if (selectedLocale === code) {
+        changeLocale(sorted[0] ?? "");
+      }
+      return next;
+    });
+    setDirty(true);
+    toast(`Removed ${localeName(code)}`, {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          setLocaleData((prev) => {
+            const next = { ...prev, [code]: deletedData ?? emptyLocaleFields() };
+            setLocales(sortLocales(Object.keys(next), primaryLocale));
+            return next;
+          });
+          setDirty(true);
+        },
+      },
+    });
+  }
+
+  // Register locale picker in the header bar
+  useRegisterHeaderLocale({
+    locales,
+    selectedLocale,
+    primaryLocale,
+    onLocaleChange: changeLocale,
+    onLocaleAdd: handleAddLocale,
+    onLocalesAdd: handleBulkAddLocales,
+    onLocaleDelete: handleDeleteLocale,
+    onBulkTranslate: () => setBulkMode("translate"),
+    onBulkCopy: () => setBulkMode("copy"),
+    onBulkTranslateAll: () => setBulkAllMode({ mode: "translate" }),
+    onBulkCopyAll: () => setBulkAllMode({ mode: "copy" }),
+    section: "testflight-info",
+    otherSectionLocales,
+  });
+
+  // Register save handler for the header Save button
+  useEffect(() => {
+    registerSave(async () => {
+      const promises: Promise<void>[] = [];
+
+      // Save localizations via PUT (batch create/update/delete)
+      let locCreatedIds: Record<string, string> = {};
+      promises.push(
+        fetch(`/api/apps/${appId}/testflight/info`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locales: localeData,
+            originalLocaleIds: originalLocaleIdsRef.current,
+          }),
+        }).then(async (res) => {
+          const data = await res.json();
+          if (!res.ok && !data.errors) throw new Error(data.error ?? "Save failed");
+          if (data.errors?.length > 0) {
+            toast.warning(`Saved with ${data.errors.length} error(s)`);
+          }
+          locCreatedIds = data.createdIds ?? {};
+        }),
+      );
+
+      if (review) {
+        promises.push(
+          fetch(`/api/apps/${appId}/testflight/info`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "updateReviewDetail",
+              detailId: review.id,
+              fields: {
+                contactFirstName: review.contactFirstName ?? "",
+                contactLastName: review.contactLastName ?? "",
+                contactPhone: review.contactPhone ?? "",
+                contactEmail: review.contactEmail ?? "",
+                demoAccountRequired: review.demoAccountRequired,
+                demoAccountName: review.demoAccountName ?? "",
+                demoAccountPassword: review.demoAccountPassword ?? "",
+                notes: review.notes ?? "",
+              },
+            }),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error ?? "Failed to save review details");
+            }
+          }),
+        );
+      }
+
+      if (licenseAgreement) {
+        promises.push(
+          fetch(`/api/apps/${appId}/testflight/info`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "updateLicense",
+              agreementId: licenseAgreement.id,
+              agreementText: licenseText,
+            }),
+          }).then(async (res) => {
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.error ?? "Failed to save license agreement");
+            }
+          }),
+        );
+      }
+
+      try {
+        await Promise.all(promises);
+        toast.success("Beta app info saved");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Save failed");
+        return;
+      }
+
+      // Update original snapshot with real IDs from created locales
+      const ids: Record<string, string> = { ...originalLocaleIdsRef.current };
+      for (const [locale, id] of Object.entries(locCreatedIds)) {
+        ids[locale] = id;
+      }
+      for (const locale of Object.keys(ids)) {
+        if (!localeData[locale]) delete ids[locale];
+      }
+      originalLocaleIdsRef.current = ids;
+
+      originalReviewRef.current = review ? { ...review } : null;
+      originalLicenseTextRef.current = licenseText;
+
+      setDirty(false);
+    });
+  }, [appId, localeData, review, licenseAgreement, licenseText, registerSave, setDirty]);
+
+  // Register discard handler for the header Discard button
+  useEffect(() => {
+    registerDiscard(() => {
+      setLocaleData(buildLocaleData(fetchedLocalizationsRef.current));
+      const sorted = sortLocales(
+        fetchedLocalizationsRef.current.map((l) => l.locale),
+        primaryLocale,
+      );
+      setLocales(sorted);
+      setReview(originalReviewRef.current ? { ...originalReviewRef.current } : null);
+      setLicenseText(originalLicenseTextRef.current);
+    });
+  }, [primaryLocale, setLocales, registerDiscard]);
 
   if (loading) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <CircleNotch size={24} className="animate-spin text-muted-foreground" />
+        <Spinner className="size-6 text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
           <ArrowClockwise size={14} className="mr-1.5" />
           Retry
@@ -204,41 +417,39 @@ export default function TestFlightInfoPage() {
     );
   }
 
+  const localeTag = selectedLocale && selectedLocale !== primaryLocale
+    ? <span className="ml-1.5 inline-flex translate-y-[-1px] rounded bg-muted px-1.5 py-0.5 align-middle text-[11px] font-normal text-muted-foreground">{selectedLocale}</span>
+    : null;
+
   return (
     <div className="space-y-8">
       {/* Beta app information */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="section-title">Beta app information</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={saveLocalization}
-            disabled={savingLoc || !localization}
-          >
-            {savingLoc ? (
-              <CircleNotch size={14} className="mr-1.5 animate-spin" />
-            ) : (
-              <FloppyDisk size={14} className="mr-1.5" />
-            )}
-            Save
-          </Button>
-        </div>
+        <h3 className="section-title">Beta app information</h3>
 
         {/* Description */}
         <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Description</label>
+          <div className="flex items-center gap-1">
+            <label className="text-sm text-muted-foreground">Description{localeTag}</label>
+            <MagicWandButton
+              value={current.description}
+              onChange={(v) => updateField("description", v)}
+              {...wandProps(wand, "description")}
+              charLimit={4000}
+              onTranslateAll={() => setBulkAllMode({ mode: "translate", field: "description" })}
+            />
+          </div>
           <Card className="gap-0 py-0">
             <CardContent className="px-5 py-4">
               <Textarea
-                value={localization?.description ?? ""}
-                onChange={(e) => updateLocField("description", e.target.value)}
+                value={current.description}
+                onChange={(e) => updateField("description", e.target.value)}
                 placeholder="Describe what testers should try..."
-                className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
+                className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
               />
             </CardContent>
             <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
-              <CharCount value={localization?.description ?? ""} limit={4000} />
+              <CharCount value={current.description} limit={4000} />
             </div>
           </Card>
         </div>
@@ -246,53 +457,63 @@ export default function TestFlightInfoPage() {
         {/* URLs */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Feedback email</label>
+            <label className="text-sm text-muted-foreground">Feedback email{localeTag}</label>
             <Input
-              value={localization?.feedbackEmail ?? ""}
-              onChange={(e) => updateLocField("feedbackEmail", e.target.value)}
+              value={current.feedbackEmail}
+              onChange={(e) => updateField("feedbackEmail", e.target.value)}
               placeholder="beta@example.com"
-              className="font-mono text-sm"
+              className="text-sm"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-muted-foreground">Marketing URL</label>
+            <label className="text-sm text-muted-foreground">Marketing URL{localeTag}</label>
             <Input
-              value={localization?.marketingUrl ?? ""}
-              onChange={(e) => updateLocField("marketingUrl", e.target.value)}
+              dir="ltr"
+              value={current.marketingUrl}
+              onChange={(e) => updateField("marketingUrl", e.target.value)}
               placeholder="https://example.com"
-              className="font-mono text-sm"
+              className="text-sm"
             />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <label className="text-sm text-muted-foreground">Privacy policy URL</label>
+            <label className="text-sm text-muted-foreground">Privacy policy URL{localeTag}</label>
             <Input
-              value={localization?.privacyPolicyUrl ?? ""}
-              onChange={(e) => updateLocField("privacyPolicyUrl", e.target.value)}
+              dir="ltr"
+              value={current.privacyPolicyUrl}
+              onChange={(e) => updateField("privacyPolicyUrl", e.target.value)}
               placeholder="https://example.com/privacy"
-              className="font-mono text-sm"
+              className="text-sm"
             />
           </div>
         </div>
       </section>
 
+      <BulkAIDialog
+        open={bulkMode !== null}
+        onOpenChange={(open) => { if (!open) setBulkMode(null); }}
+        mode={bulkMode ?? "copy"}
+        targetLocale={selectedLocale}
+        primaryLocale={primaryLocale}
+        localeData={localeData}
+        fields={bulkFields}
+        appName={app?.name}
+        onApply={handleBulkApply}
+      />
+      <BulkAllAIDialog
+        open={bulkAllMode !== null}
+        onOpenChange={(open) => { if (!open) setBulkAllMode(null); }}
+        mode={bulkAllMode?.mode ?? "copy"}
+        primaryLocale={primaryLocale}
+        locales={locales}
+        localeData={localeData}
+        fields={bulkAllMode?.field ? bulkFields.filter((f) => f.key === bulkAllMode.field) : bulkFields}
+        appName={app?.name}
+        onApply={handleBulkApply}
+      />
+
       {/* Beta app review information */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="section-title">Beta app review information</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={saveReviewDetail}
-            disabled={savingReview || !review}
-          >
-            {savingReview ? (
-              <CircleNotch size={14} className="mr-1.5 animate-spin" />
-            ) : (
-              <FloppyDisk size={14} className="mr-1.5" />
-            )}
-            Save
-          </Button>
-        </div>
+        <h3 className="section-title">Beta app review information</h3>
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Contact fields */}
           <div className="grid gap-4 sm:grid-cols-2">
@@ -317,7 +538,7 @@ export default function TestFlightInfoPage() {
               <Input
                 value={review?.contactPhone ?? ""}
                 onChange={(e) => updateReviewField("contactPhone", e.target.value)}
-                className="font-mono text-sm"
+                className="text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -326,7 +547,7 @@ export default function TestFlightInfoPage() {
                 value={review?.contactEmail ?? ""}
                 onChange={(e) => updateReviewField("contactEmail", e.target.value)}
                 type="email"
-                className="font-mono text-sm"
+                className="text-sm"
               />
             </div>
           </div>
@@ -340,7 +561,7 @@ export default function TestFlightInfoPage() {
                   value={review?.notes ?? ""}
                   onChange={(e) => updateReviewField("notes", e.target.value)}
                   placeholder="Notes for the App Review team..."
-                  className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
+                  className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
                 />
               </CardContent>
               <div className="flex items-center rounded-b-xl border-t bg-sidebar px-3 py-1.5">
@@ -370,7 +591,7 @@ export default function TestFlightInfoPage() {
                   value={review.demoAccountName ?? ""}
                   onChange={(e) => updateReviewField("demoAccountName", e.target.value)}
                   placeholder="demo@example.com"
-                  className="font-mono text-sm"
+                  className="text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -380,7 +601,7 @@ export default function TestFlightInfoPage() {
                   onChange={(e) => updateReviewField("demoAccountPassword", e.target.value)}
                   type="password"
                   placeholder="Password"
-                  className="font-mono text-sm"
+                  className="text-sm"
                 />
               </div>
             </div>
@@ -390,29 +611,14 @@ export default function TestFlightInfoPage() {
 
       {/* License agreement */}
       <section className="space-y-2 pb-8">
-        <div className="flex items-center justify-between">
-          <h3 className="section-title">License agreement</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={saveLicense}
-            disabled={savingLicense || !licenseAgreement}
-          >
-            {savingLicense ? (
-              <CircleNotch size={14} className="mr-1.5 animate-spin" />
-            ) : (
-              <FloppyDisk size={14} className="mr-1.5" />
-            )}
-            Save
-          </Button>
-        </div>
+        <h3 className="section-title">License agreement</h3>
         <Card className="gap-0 py-0">
           <CardContent className="px-5 py-4">
             <Textarea
               value={licenseText}
-              onChange={(e) => setLicenseText(e.target.value)}
+              onChange={(e) => updateLicenseText(e.target.value)}
               placeholder="Enter your license agreement text..."
-              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none font-mono text-sm min-h-0 dark:bg-transparent"
+              className="border-0 p-0 shadow-none focus-visible:ring-0 resize-none text-sm min-h-0 dark:bg-transparent"
             />
           </CardContent>
         </Card>
