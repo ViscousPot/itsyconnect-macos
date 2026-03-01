@@ -29,12 +29,13 @@ import {
 } from "@/components/ui/table";
 import { Spinner } from "@/components/ui/spinner";
 import { PaginatedList } from "@/components/paginated-list";
-import { Copy, CircleNotch, ArrowClockwise, Plus, UserPlus, MagnifyingGlass, Minus } from "@phosphor-icons/react";
+import { Copy, CircleNotch, Plus, UserPlus, MagnifyingGlass, Minus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useRegisterRefresh } from "@/lib/refresh-context";
 import { useSetBreadcrumbTitle } from "@/lib/breadcrumb-context";
 import { FooterPortal } from "@/lib/footer-portal-context";
 import type { TFBuild, TFGroup, TFTester } from "@/lib/asc/testflight";
+import { EmptyState } from "@/components/empty-state";
 
 const TESTER_STATUS_DOTS: Record<string, string> = {
   INSTALLED: "bg-green-500",
@@ -314,10 +315,9 @@ export default function GroupDetailPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>
@@ -325,11 +325,7 @@ export default function GroupDetailPage() {
   }
 
   if (!group) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        Group not found
-      </div>
-    );
+    return <EmptyState title="Group not found" />;
   }
 
   return (

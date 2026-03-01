@@ -31,6 +31,7 @@ import { MagicWandButton, wandProps } from "@/components/magic-wand-button";
 import type { MagicWandLocaleProps } from "@/components/magic-wand-button";
 import { BulkAIDialog, type BulkField } from "@/components/bulk-ai-dialog";
 import { BulkAllAIDialog } from "@/components/bulk-all-ai-dialog";
+import { EmptyState } from "@/components/empty-state";
 
 const SORTED_CATEGORIES = Object.keys(CATEGORIES).sort((a, b) =>
   CATEGORIES[a].localeCompare(CATEGORIES[b]),
@@ -421,11 +422,7 @@ export default function AppDetailsPage() {
   });
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (infoLoading || locLoading) {

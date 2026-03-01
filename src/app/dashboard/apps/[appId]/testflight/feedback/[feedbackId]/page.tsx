@@ -16,10 +16,10 @@ import {
   Package,
   WarningCircle,
   CircleNotch,
-  ArrowClockwise,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { MockFeedbackItem } from "@/lib/mock-testflight";
+import { EmptyState } from "@/components/empty-state";
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -76,10 +76,9 @@ export default function FeedbackDetailPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>
@@ -87,11 +86,7 @@ export default function FeedbackDetailPage() {
   }
 
   if (!item) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        Feedback not found
-      </div>
-    );
+    return <EmptyState title="Feedback not found" />;
   }
 
   const specs = [

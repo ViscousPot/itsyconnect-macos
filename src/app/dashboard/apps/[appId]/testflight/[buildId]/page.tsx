@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { CircleNotch, ArrowClockwise, Plus, X, UserPlus, MagnifyingGlass } from "@phosphor-icons/react";
+import { CircleNotch, Plus, X, UserPlus, MagnifyingGlass } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useRegisterRefresh } from "@/lib/refresh-context";
 import { useSetBreadcrumbTitle } from "@/lib/breadcrumb-context";
@@ -19,6 +19,7 @@ import { AppIcon } from "@/components/app-icon";
 import { CharCount } from "@/components/char-count";
 import { useBuildAction } from "@/lib/build-action-context";
 import type { TFBuild, TFGroup, TFTester } from "@/lib/asc/testflight";
+import { EmptyState } from "@/components/empty-state";
 
 const STATUS_DOTS: Record<string, string> = {
   Testing: "bg-green-500",
@@ -226,10 +227,9 @@ export default function BuildDetailPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>
@@ -237,11 +237,7 @@ export default function BuildDetailPage() {
   }
 
   if (!build) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        Build not found
-      </div>
-    );
+    return <EmptyState title="Build not found" />;
   }
 
   const isExpired = build.expired;

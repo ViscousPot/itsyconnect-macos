@@ -29,8 +29,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/empty-state";
 import { PaginatedList } from "@/components/paginated-list";
-import { CircleNotch, ArrowClockwise, CaretDown, Prohibit, Plus, Minus } from "@phosphor-icons/react";
+import { CircleNotch, CaretDown, Prohibit, Plus, Minus, Package } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
 import { useApps } from "@/lib/apps-context";
@@ -268,11 +269,7 @@ export default function TestFlightBuildsPage() {
   }
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (loading) {
@@ -285,13 +282,26 @@ export default function TestFlightBuildsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>
+    );
+  }
+
+  if (builds.length === 0) {
+    return (
+      <EmptyState
+        icon={Package}
+        title="No builds"
+        description={
+          versionString
+            ? `No builds found for version ${versionString}. Upload a build from Xcode to see it here.`
+            : "Upload a build from Xcode to see it here."
+        }
+      />
     );
   }
 

@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Camera, WarningCircle, CircleNotch, ArrowClockwise, Info } from "@phosphor-icons/react";
+import { Camera, WarningCircle, CircleNotch, Info } from "@phosphor-icons/react";
 import { useApps } from "@/lib/apps-context";
 import { useRegisterRefresh } from "@/lib/refresh-context";
 import type { MockFeedbackItem } from "@/lib/mock-testflight";
+import { EmptyState } from "@/components/empty-state";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-GB", {
@@ -117,11 +118,7 @@ export default function FeedbackPage() {
   }, [allFeedback]);
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (loading) {
@@ -134,10 +131,9 @@ export default function FeedbackPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>

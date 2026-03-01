@@ -163,6 +163,42 @@ Key rules:
 - The `flex-1` only works when every ancestor up to the dashboard layout is also a flex column with `flex-1`. Check the chain if the spinner isn't centring.
 - Sub-layouts that wrap `{children}` must use `flex flex-1 flex-col gap-*` instead of `space-y-*` so child loading states can stretch.
 
+### Empty states
+
+Use `<EmptyState>` from `src/components/empty-state.tsx` for pages or sections with no data. Like loading/error states it uses `flex-1` to fill the available space, so the same flex-column chain requirement applies.
+
+```tsx
+import { EmptyState } from "@/components/empty-state";
+import { Package } from "@phosphor-icons/react";
+
+// With icon + title + description (primary pattern)
+<EmptyState
+  icon={Package}
+  title="No builds"
+  description="Upload a build from Xcode to see it here."
+/>
+
+// Title only (e.g. "not found" states)
+<EmptyState title="App not found" />
+
+// Title + description, no icon
+<EmptyState title="No versions" description="Create a version to start editing your store listing." />
+```
+
+Key rules:
+- Always use `<EmptyState>` – never hand-roll centering divs with `py-20`.
+- Title: `text-base font-medium`. Description: `text-sm text-muted-foreground`, max 1–2 sentences.
+- Icon is optional. When used, pass a Phosphor icon component – the component renders it at size 24 inside a `size-12 rounded-xl bg-muted` container.
+- `description` accepts `ReactNode` so you can include links when needed.
+
+For **inline** empty states inside a list or section (e.g. "no reviews match filters"), use the dashed-border pattern directly:
+
+```tsx
+<div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+  No reviews match the current filters.
+</div>
+```
+
 ### Sidebar
 
 - Follows the shadcn sidebar-07 pattern (app switcher, grouped nav, footer)

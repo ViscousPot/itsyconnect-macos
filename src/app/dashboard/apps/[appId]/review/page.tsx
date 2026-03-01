@@ -15,6 +15,7 @@ import { useFormDirty } from "@/lib/form-dirty-context";
 import { resolveVersion } from "@/lib/asc/version-types";
 import { FIELD_LIMITS } from "@/lib/asc/locale-names";
 import { CharCount } from "@/components/char-count";
+import { EmptyState } from "@/components/empty-state";
 
 export default function AppReviewPage() {
   const { appId } = useParams<{ appId: string }>();
@@ -140,11 +141,7 @@ export default function AppReviewPage() {
   }, [reviewDetail, registerDiscard]);
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (versionsLoading) {

@@ -33,6 +33,7 @@ import { parseRange, filterByDateRange, previousRange } from "@/lib/analytics-ra
 import { KpiCard } from "@/components/kpi-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/empty-state";
 
 // ---------- Chart configs ----------
 
@@ -193,13 +194,7 @@ export default function AnalyticsOverviewPage() {
     && data.dailyEngagement.length === 0;
 
   if (isEmpty) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">
-          No analytics data available for this app
-        </p>
-      </div>
-    );
+    return <EmptyState title="No analytics data" description="No analytics data is available for this app yet." />;
   }
 
   return (

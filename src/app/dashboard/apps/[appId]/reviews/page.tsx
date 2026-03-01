@@ -30,7 +30,6 @@ import {
   WarningCircle,
   Translate,
   CircleNotch,
-  ArrowClockwise,
   MagicWand,
   PencilSimple,
   Copy,
@@ -43,6 +42,7 @@ import { useAIStatus } from "@/lib/hooks/use-ai-status";
 import { AIRequiredDialog } from "@/components/ai-required-dialog";
 import type { AscCustomerReview } from "@/lib/asc/reviews";
 import type { MockReview } from "@/lib/mock-reviews";
+import { EmptyState } from "@/components/empty-state";
 
 // ── Territory helpers ──────────────────────────────────────────────
 
@@ -614,11 +614,7 @@ export default function ReviewsPage() {
   // ── Render ─────────────────────────────────────────────────────
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (loading) {
@@ -631,10 +627,9 @@ export default function ReviewsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-20 text-sm text-muted-foreground">
-        <p>{error}</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <p className="text-sm text-muted-foreground">{error}</p>
         <Button variant="outline" size="sm" onClick={() => fetchReviews()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
           Retry
         </Button>
       </div>

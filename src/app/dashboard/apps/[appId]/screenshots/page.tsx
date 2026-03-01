@@ -57,6 +57,7 @@ import {
   type AscScreenshotSet,
 } from "@/lib/asc/display-types";
 import { useRegisterHeaderLocale } from "@/lib/header-locale-context";
+import { EmptyState } from "@/components/empty-state";
 import { useLocaleManagement } from "@/lib/hooks/use-locale-management";
 import { useScreenshotOperations } from "@/lib/hooks/use-screenshot-operations";
 
@@ -800,11 +801,7 @@ export default function ScreenshotsPage() {
   });
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (versionsLoading || locLoading) {

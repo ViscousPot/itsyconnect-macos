@@ -27,6 +27,7 @@ import { type LocaleFields, emptyLocaleFields, LocaleFieldsSection } from "./_co
 import { VersionStringSection } from "./_components/version-string-section";
 import { BuildSection } from "./_components/build-section";
 import { ReleaseSettings } from "./_components/release-settings";
+import { EmptyState } from "@/components/empty-state";
 
 
 function buildLocaleData(
@@ -484,11 +485,7 @@ export default function StoreListingPage() {
   });
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   if (versionsLoading || locLoading) {
@@ -501,12 +498,10 @@ export default function StoreListingPage() {
 
   if (versions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <h2 className="text-lg font-medium">No versions</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create a version to start editing your store listing.
-        </p>
-      </div>
+      <EmptyState
+        title="No versions"
+        description="Create a version to start editing your store listing."
+      />
     );
   }
 

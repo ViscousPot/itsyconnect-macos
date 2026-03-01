@@ -20,6 +20,7 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react";
 import { Spinner } from "@/components/ui/spinner";
+import { EmptyState } from "@/components/empty-state";
 import {
   Bar,
   BarChart,
@@ -135,11 +136,7 @@ export default function AppOverviewPage() {
   }
 
   if (!app) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        App not found
-      </div>
-    );
+    return <EmptyState title="App not found" />;
   }
 
   // Last 30 days of data
