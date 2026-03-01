@@ -102,6 +102,18 @@ export async function releaseVersion(versionId: string): Promise<void> {
   });
 }
 
+export async function selectBuildForVersion(
+  versionId: string,
+  buildId: string,
+): Promise<void> {
+  await ascFetch(`/v1/appStoreVersions/${versionId}/relationships/build`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      data: { type: "builds", id: buildId },
+    }),
+  });
+}
+
 export function invalidateVersionsCache(appId: string): void {
   cacheInvalidate(`versions:${appId}`);
 }

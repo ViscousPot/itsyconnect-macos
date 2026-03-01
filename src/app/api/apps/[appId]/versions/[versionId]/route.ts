@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateVersionAttributes, deleteVersion, invalidateVersionsCache } from "@/lib/asc/version-mutations";
+import { updateVersionAttributes, selectBuildForVersion, deleteVersion, invalidateVersionsCache } from "@/lib/asc/version-mutations";
 import { hasCredentials } from "@/lib/asc/client";
 
 export async function PATCH(
@@ -13,21 +13,35 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { versionString } = body as { versionString?: string };
+  const { versionString, buildId } = body as { versionString?: string; buildId?: string };
 
-  if (!versionString) {
+  if (!versionString && !buildId) {
     return NextResponse.json(
-      { error: "versionString is required" },
+      { error: "versionString or buildId is required" },
       { status: 400 },
     );
   }
 
   try {
-    await updateVersionAttributes(versionId, { versionString });
+    if (versionString) {
+      await updateVersionAttributes(versionId, { versionString });
+    }
+    if (buildId) {
+      await selectBuildForVersion(versionId, buildId);
+    }
     invalidateVersionsCache(appId);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const raw = err instanceof Error ? err.message : "Unknown error";
+    // Extract first detail from ASC JSON error envelope
+    let message = raw;
+    const jsonStart = raw.indexOf("{");
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(raw.slice(jsonStart));
+        message = parsed.errors?.[0]?.detail ?? raw;
+      } catch { /* keep raw */ }
+    }
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

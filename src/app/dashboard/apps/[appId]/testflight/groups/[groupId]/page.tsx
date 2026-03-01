@@ -12,6 +12,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -135,12 +140,24 @@ export default function GroupDetailPage() {
 
   useSetBreadcrumbTitle(group?.name ?? null);
 
-  // Builds available to add (non-expired, not already in this group)
+  // Builds available to add, grouped by version (latest first)
+  // allAppBuilds is already sorted by uploadedDate desc from the API
   const groupBuildIds = useMemo(() => new Set(builds.map((b) => b.id)), [builds]);
-  const availableBuilds = useMemo(
-    () => allAppBuilds.filter((b) => !b.expired && !groupBuildIds.has(b.id)),
-    [allAppBuilds, groupBuildIds],
-  );
+  const buildsByVersion = useMemo(() => {
+    const filtered = allAppBuilds.filter((b) => !b.expired && !groupBuildIds.has(b.id));
+    const map = new Map<string, TFBuild[]>();
+    for (const b of filtered) {
+      const v = b.versionString || "Unknown";
+      const arr = map.get(v);
+      if (arr) arr.push(b);
+      else map.set(v, [b]);
+    }
+    return map;
+  }, [allAppBuilds, groupBuildIds]);
+  const versionKeys = useMemo(() => [...buildsByVersion.keys()], [buildsByVersion]);
+  const latestVersion = versionKeys[0] ?? null;
+  const olderVersions = versionKeys.slice(1);
+  const hasAvailableBuilds = buildsByVersion.size > 0;
 
   // Add build handler
   const [addingBuild, setAddingBuild] = useState(false);
@@ -367,7 +384,7 @@ export default function GroupDetailPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="section-title">Builds</h3>
-          {availableBuilds.length > 0 && (
+          {hasAvailableBuilds && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" disabled={addingBuild}>
@@ -375,13 +392,33 @@ export default function GroupDetailPage() {
                   Add build
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="max-h-60 overflow-y-auto">
-                {availableBuilds.map((b) => (
-                  <DropdownMenuItem key={b.id} onClick={() => addBuild(b.id)}>
-                    <span className="font-medium">{b.buildNumber}</span>
-                    <span className="ml-2 text-muted-foreground">{b.versionString}</span>
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
+                {latestVersion && (
+                  <>
+                    <DropdownMenuLabel>Version {latestVersion}</DropdownMenuLabel>
+                    {buildsByVersion.get(latestVersion)!.map((b) => (
+                      <BuildDropdownItem key={b.id} build={b} onSelect={addBuild} />
+                    ))}
+                  </>
+                )}
+                {olderVersions.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Older versions</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-72 max-h-72 overflow-y-auto">
+                        {olderVersions.map((version) => (
+                          <div key={version}>
+                            <DropdownMenuLabel>Version {version}</DropdownMenuLabel>
+                            {buildsByVersion.get(version)!.map((b) => (
+                              <BuildDropdownItem key={b.id} build={b} onSelect={addBuild} />
+                            ))}
+                          </div>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -640,6 +677,33 @@ export default function GroupDetailPage() {
         onAdded={() => fetchData(true)}
       />
     </div>
+  );
+}
+
+// ── Build dropdown item ───────────────────────────────────────────
+
+function BuildDropdownItem({
+  build,
+  onSelect,
+}: {
+  build: TFBuild;
+  onSelect: (buildId: string) => void;
+}) {
+  return (
+    <DropdownMenuItem onClick={() => onSelect(build.id)}>
+      <div className="flex w-full items-center gap-3">
+        <span className="font-medium tabular-nums">{build.buildNumber}</span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-block size-2 shrink-0 rounded-full ${BUILD_STATUS_DOTS[build.status] ?? "bg-gray-400"}`}
+          />
+          <span className="text-xs text-muted-foreground">{build.status}</span>
+        </div>
+        <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+          {formatDate(build.uploadedDate)}
+        </span>
+      </div>
+    </DropdownMenuItem>
   );
 }
 
