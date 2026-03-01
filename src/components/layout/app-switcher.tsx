@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { CaretUpDown } from "@phosphor-icons/react";
+import { CaretUpDown, MagnifyingGlass } from "@phosphor-icons/react";
 import { Spinner } from "@/components/ui/spinner";
 import { useApps } from "@/lib/apps-context";
 import { useFormDirty } from "@/lib/form-dirty-context";
@@ -28,8 +29,17 @@ export function AppSwitcher() {
   const { isMobile } = useSidebar();
   const { apps, loading } = useApps();
   const { guardNavigation } = useFormDirty();
+  const [search, setSearch] = useState("");
 
   const activeApp = apps.find((a) => a.id === appId);
+
+  const filteredApps = useMemo(() => {
+    if (!search) return apps;
+    const q = search.toLowerCase();
+    return apps.filter(
+      (a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q),
+    );
+  }, [apps, search]);
 
   /** Subpages that persist across app switches (Insights + TestFlight). */
   const STICKY_SUBPAGES = new Set([
@@ -85,36 +95,59 @@ export function AppSwitcher() {
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
+            onCloseAutoFocus={() => setSearch("")}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Apps
             </DropdownMenuLabel>
-            {apps.length === 0 && !loading && (
-              <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                No apps found
+            {apps.length > 5 && (
+              <div className="px-2 pb-1">
+                <div className="relative">
+                  <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    placeholder="Search apps…"
+                    className="h-8 w-full rounded-md border bg-transparent pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
+                    autoFocus
+                  />
+                </div>
               </div>
             )}
-            {apps.map((app) => (
-              <DropdownMenuItem
-                key={app.id}
-                onClick={() => guardNavigation(() => router.push(buildAppUrl(app.id)))}
-                className="gap-2 p-2"
-              >
-                <AppIcon
-                  iconUrl={app.iconUrl}
-                  name={app.name}
-                  className="size-6"
-                  iconSize={12}
-                  rounded="rounded-md"
-                />
-                <div className="grid flex-1 leading-tight">
-                  <span className="truncate font-medium">{app.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {app.bundleId}
-                  </span>
+            <div className="max-h-72 overflow-y-auto">
+              {apps.length === 0 && !loading && (
+                <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                  No apps found
                 </div>
-              </DropdownMenuItem>
-            ))}
+              )}
+              {filteredApps.length === 0 && search && (
+                <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                  No matching apps
+                </div>
+              )}
+              {filteredApps.map((app) => (
+                <DropdownMenuItem
+                  key={app.id}
+                  onClick={() => guardNavigation(() => router.push(buildAppUrl(app.id)))}
+                  className="gap-2 p-2"
+                >
+                  <AppIcon
+                    iconUrl={app.iconUrl}
+                    name={app.name}
+                    className="size-6"
+                    iconSize={12}
+                    rounded="rounded-md"
+                  />
+                  <div className="grid flex-1 leading-tight">
+                    <span className="truncate font-medium">{app.name}</span>
+                    <span className="truncate text-xs font-mono text-muted-foreground">
+                      {app.id}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
