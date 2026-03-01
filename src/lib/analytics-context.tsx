@@ -26,6 +26,7 @@ interface AnalyticsState {
 const AnalyticsContext = createContext<AnalyticsState | null>(null);
 
 const POLL_INTERVAL = 3000;
+const MAX_POLLS = 20; // 20 × 3s = 60s max wait
 
 export function AnalyticsProvider({
   appId,
@@ -41,6 +42,7 @@ export function AnalyticsProvider({
   const [meta, setMeta] = useState<{ fetchedAt: number; ttlMs: number } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollCount = useRef(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -53,15 +55,23 @@ export function AnalyticsProvider({
       if (!res.ok) {
         setError(json.error ?? `HTTP ${res.status}`);
         setPending(false);
+        setRefreshing(false);
         return;
       }
 
       if (json.pending) {
+        pollCount.current += 1;
+        if (pollCount.current >= MAX_POLLS) {
+          setPending(false);
+          setRefreshing(false);
+          setError("Analytics refresh timed out – try again later");
+          return;
+        }
         setPending(true);
-        // Keep existing data visible while refresh happens in background
         return;
       }
 
+      pollCount.current = 0;
       setPending(false);
       setRefreshing(false);
       setData(json.data);
@@ -69,6 +79,7 @@ export function AnalyticsProvider({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch analytics");
       setPending(false);
+      setRefreshing(false);
     } finally {
       setLoading(false);
     }
@@ -95,6 +106,7 @@ export function AnalyticsProvider({
   // Manual refresh: invalidate cache + trigger background rebuild
   const triggerRefresh = useCallback(async () => {
     setRefreshing(true);
+    pollCount.current = 0;
     try {
       await fetch(`/api/apps/${appId}/analytics/refresh`, { method: "POST" });
       setPending(true);
