@@ -194,6 +194,9 @@ export function AddAccountDialog({
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               className="font-mono text-sm"
             />
+            <p className="text-xs text-muted-foreground">
+              Requires a key with Admin access.
+            </p>
           </div>
           <div className="space-y-2">
             <label className="text-sm text-muted-foreground">

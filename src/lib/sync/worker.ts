@@ -68,6 +68,14 @@ export function startSyncWorker(): void {
   }
 }
 
+export function triggerSync(): void {
+  if (!running || !hasCredentials()) return;
+  console.log("[sync] Triggered immediate sync");
+  for (const schedule of schedules) {
+    runJob(schedule);
+  }
+}
+
 export function stopSyncWorker(): void {
   for (const schedule of schedules) {
     if (schedule.timer) {

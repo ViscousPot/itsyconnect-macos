@@ -83,6 +83,11 @@ export async function POST(request: Request) {
   cacheInvalidateAll();
   resetToken();
 
+  // Trigger immediate sync for the new active team
+  const { startSyncWorker, triggerSync } = await import("@/lib/sync/worker");
+  startSyncWorker(); // no-op if already running
+  triggerSync();
+
   return NextResponse.json({ ok: true, id }, { status: 201 });
 }
 

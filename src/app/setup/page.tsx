@@ -16,6 +16,7 @@ import {
   CheckCircle,
   Eye,
   EyeSlash,
+  IdentificationBadge,
   Info,
   Lock,
   MagicWand,
@@ -27,7 +28,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { AI_PROVIDERS } from "@/lib/ai-providers";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-const WIZARD_STEPS = 2;
+const WIZARD_STEPS = 3;
 
 export default function SetupPage() {
   const router = useRouter();
@@ -53,8 +54,10 @@ export default function SetupPage() {
       });
   }, [router]);
 
-  // Step 1 – ASC credentials
+  // Step 1 – Team name
   const [teamName, setTeamName] = useState("My team");
+
+  // Step 2 – ASC credentials
   const [issuerId, setIssuerId] = useState("");
   const [keyId, setKeyId] = useState("");
   const [keyIdFromFile, setKeyIdFromFile] = useState(false);
@@ -65,7 +68,7 @@ export default function SetupPage() {
   >("idle");
   const [testError, setTestError] = useState("");
 
-  // Step 2 – AI
+  // Step 3 – AI
   const [providerId, setProviderId] = useState("anthropic");
   const [modelId, setModelId] = useState("claude-sonnet-4-6");
   const [apiKey, setApiKey] = useState("");
@@ -158,11 +161,13 @@ export default function SetupPage() {
 
   function canAdvance(): boolean {
     if (step === 0) return true;
-    if (step === 1) {
+    if (step === 1) return teamName.trim().length > 0;
+    if (step === 2) {
       return (
         issuerId.trim().length > 0 &&
         keyId.trim().length > 0 &&
-        privateKey.trim().length > 0
+        privateKey.trim().length > 0 &&
+        testStatus === "ok"
       );
     }
     return true;
@@ -234,19 +239,23 @@ export default function SetupPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             {step === 0 && <Package size={32} weight="fill" />}
-            {step === 1 && <AppStoreLogoIcon size={32} weight="fill" />}
-            {step === 2 && <MagicWand size={32} weight="fill" />}
+            {step === 1 && <IdentificationBadge size={32} weight="fill" />}
+            {step === 2 && <AppStoreLogoIcon size={32} weight="fill" />}
+            {step === 3 && <MagicWand size={32} weight="fill" />}
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
             {step === 0 && "Welcome to Itsyconnect"}
-            {step === 1 && "App Store Connect"}
-            {step === 2 && "AI assistant"}
+            {step === 1 && "Developer account"}
+            {step === 2 && "App Store Connect"}
+            {step === 3 && "AI assistant"}
           </h1>
           <p className="text-sm text-muted-foreground text-center">
             {step === 0 && "Better App Store Connect"}
             {step === 1 &&
-              "Set up to manage apps, versions, and metadata."}
+              "Name your developer account to get started."}
             {step === 2 &&
+              "Set up to manage apps, versions, and metadata."}
+            {step === 3 &&
               "Add an API key to auto-translate app metadata, generate keywords, and improve descriptions."}
           </p>
         </div>
@@ -293,8 +302,27 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* Step 1 – ASC credentials */}
+        {/* Step 1 – Team name */}
         {step === 1 && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm text-muted-foreground">Team name</label>
+              <Input
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                placeholder="My team"
+                className="text-sm"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                A label to identify this developer account. You can connect multiple Apple developer accounts later.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 – ASC credentials */}
+        {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
               <div className="flex items-start gap-2">
@@ -314,20 +342,6 @@ export default function SetupPage() {
                 </p>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <label className="text-sm text-muted-foreground">Team name</label>
-              <Input
-                value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
-                placeholder="My team"
-                className="text-sm"
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">
-                A label to identify this developer account. You can connect multiple Apple developer accounts later.
-              </p>
-            </div>
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">Issuer ID</label>
               <Input
@@ -335,6 +349,7 @@ export default function SetupPage() {
                 onChange={(e) => setIssuerId(e.target.value)}
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 className="font-mono text-sm"
+                autoFocus
               />
             </div>
             <div className="space-y-2">
@@ -372,14 +387,6 @@ export default function SetupPage() {
                     <p className="flex items-center gap-1.5 text-xs text-destructive">
                       <XCircle size={14} weight="fill" />
                       {testError || "Connection failed – check your credentials."}
-                      {" "}
-                      <button
-                        type="button"
-                        className="underline underline-offset-2 hover:text-destructive/80"
-                        onClick={() => testConnection(issuerId.trim(), keyId.trim(), privateKey)}
-                      >
-                        Test again
-                      </button>
                     </p>
                   )}
                   {testStatus === "idle" && !keyIdFromFile && (
@@ -405,8 +412,8 @@ export default function SetupPage() {
           </div>
         )}
 
-        {/* Step 2 – AI */}
-        {step === 2 && (
+        {/* Step 3 – AI */}
+        {step === 3 && (
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm text-muted-foreground">Provider</label>

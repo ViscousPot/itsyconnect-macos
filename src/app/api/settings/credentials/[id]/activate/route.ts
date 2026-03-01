@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { ascCredentials } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { cacheInvalidateAll } from "@/lib/cache";
+import { cacheInvalidate } from "@/lib/cache";
 import { resetToken } from "@/lib/asc/client";
 
 export async function POST(
@@ -31,9 +31,12 @@ export async function POST(
     .where(eq(ascCredentials.id, id))
     .run();
 
-  // Clear cache and token – UI will fetch fresh data from ASC on next load
-  cacheInvalidateAll();
+  // Clear apps list cache (team-dependent) and token, keep per-app data
+  cacheInvalidate("apps");
   resetToken();
+
+  const { triggerSync } = await import("@/lib/sync/worker");
+  triggerSync();
 
   return NextResponse.json({ ok: true });
 }
