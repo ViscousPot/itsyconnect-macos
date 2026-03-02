@@ -23,7 +23,7 @@ const config: ForgeConfig = {
       if (!filePath) return false;
       if (filePath === "/package.json") return false;
       if (filePath.startsWith("/electron")) return false;
-      if (filePath.startsWith("/.next/standalone")) return false;
+      if (filePath === "/.next" || filePath.startsWith("/.next/standalone")) return false;
       if (filePath.startsWith("/drizzle")) return false;
       if (filePath.startsWith("/public")) return false;
       return true;

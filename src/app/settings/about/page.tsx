@@ -1,10 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import { APP_VERSION, BUILD_NUMBER } from "@/lib/version";
 
 export default function AboutPage() {
   return (
     <div className="max-w-2xl space-y-6">
+      <Image
+        src="/icon.png"
+        alt="Itsyconnect"
+        width={64}
+        height={64}
+        className="rounded-xl"
+      />
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Itsyconnect</h2>
         <a

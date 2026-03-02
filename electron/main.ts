@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, safeStorage, ipcMain, screen, shell } from "electron";
+import { app, BrowserWindow, Menu, safeStorage, ipcMain, screen, shell, protocol, net } from "electron";
 import { spawn, ChildProcess } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
@@ -8,6 +8,19 @@ import http from "node:http";
 
 const isDev = !app.isPackaged;
 let nextProcess: ChildProcess | null = null;
+
+// Register custom protocol before app is ready – gives stable origin for localStorage
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "app",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 // --- Master key management via macOS Keychain ---
 
@@ -88,6 +101,17 @@ function getRandomPort(): Promise<number> {
       }
     });
     server.on("error", reject);
+  });
+}
+
+// --- Custom protocol proxy ---
+
+function registerProtocolProxy(port: number): void {
+  protocol.handle("app", (request) => {
+    // Rewrite app://itsyconnect/path to http://127.0.0.1:PORT/path
+    const url = new URL(request.url);
+    const target = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
+    return net.fetch(target);
   });
 }
 
@@ -235,19 +259,20 @@ function createWindow(port: number): void {
 
   // Open external links in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http://127.0.0.1")) return { action: "allow" };
+    if (url.startsWith("app://") || url.startsWith("http://127.0.0.1")) return { action: "allow" };
     shell.openExternal(url);
     return { action: "deny" };
   });
 
   mainWindow.webContents.on("will-navigate", (event, url) => {
-    if (!url.startsWith("http://127.0.0.1")) {
+    if (!url.startsWith("app://") && !url.startsWith("http://127.0.0.1")) {
       event.preventDefault();
       shell.openExternal(url);
     }
   });
 
-  mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  // Use stable app:// origin so localStorage persists across launches
+  mainWindow.loadURL("app://itsyconnect/");
 
   ipcMain.once("app-ready", () => {
     mainWindow?.show();
@@ -291,6 +316,7 @@ if (!gotLock) {
     setupMenu();
 
     const port = isDev ? await startDevServer() : await startProdServer();
+    registerProtocolProxy(port);
     createWindow(port);
 
     app.on("activate", () => {
