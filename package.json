@@ -13,7 +13,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "electron:compile": "tsc -p electron/tsconfig.json",
-    "electron:prepare": "cp -r public .next/standalone/public && cp -r .next/static .next/standalone/.next/static && cp -r drizzle .next/standalone/drizzle && npx electron-rebuild -o better-sqlite3 -m .next/standalone",
+    "electron:prepare": "cp -r public .next/standalone/public && cp -r .next/static .next/standalone/.next/static && cp -r drizzle .next/standalone/drizzle && npx electron-rebuild -f -o better-sqlite3 --build-from-source && cp node_modules/better-sqlite3/build/Release/better_sqlite3.node .next/standalone/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
     "electron:dev": "npm run electron:compile && electron .",
     "electron:make:dmg": "npm run electron:compile && next build && npm run electron:prepare && electron-forge make --targets=@electron-forge/maker-dmg",
     "electron:make:mas": "npm run electron:compile && next build && npm run electron:prepare && electron-forge make --targets=@electron-forge/maker-pkg --platform=mas"

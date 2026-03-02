@@ -4,6 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createServer as createNetServer } from "node:net";
+import { pathToFileURL } from "node:url";
 import http from "node:http";
 
 const isDev = !app.isPackaged;
@@ -107,10 +108,20 @@ function getRandomPort(): Promise<number> {
 // --- Custom protocol proxy ---
 
 function registerProtocolProxy(port: number): void {
+  const standaloneDir = path.join(app.getAppPath(), ".next", "standalone");
+
   protocol.handle("app", (request) => {
-    // Rewrite app://itsyconnect/path to http://127.0.0.1:PORT/path
     const url = new URL(request.url);
-    const target = `http://127.0.0.1:${port}${url.pathname}${url.search}`;
+    const pathname = url.pathname;
+
+    // Serve static assets directly from filesystem – avoids net.fetch issues with fonts
+    if (pathname.startsWith("/_next/static/")) {
+      const filePath = path.join(standaloneDir, ".next", "static", pathname.slice("/_next/static/".length));
+      return net.fetch(pathToFileURL(filePath).toString());
+    }
+
+    // Proxy dynamic requests to Next.js server
+    const target = `http://127.0.0.1:${port}${pathname}${url.search}`;
     return net.fetch(target, {
       method: request.method,
       headers: request.headers,
@@ -144,6 +155,9 @@ async function startProdServer(): Promise<number> {
   process.chdir(standaloneDir);
 
   require(path.join(standaloneDir, "server.js"));
+
+  // Next.js sets process.title = "next-server" which overrides macOS menu bar name
+  process.title = "Itsyconnect";
 
   await waitForServer(port);
   return port;
