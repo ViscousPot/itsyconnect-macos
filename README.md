@@ -20,14 +20,16 @@ Everything runs locally. One SQLite database, no cloud, no accounts, no telemetr
 
 <table>
   <tr>
-    <td><img src="docs/screenshots/1.webp" alt="App overview with version cards, downloads, proceeds, and crash-free rate" /></td>
-    <td><img src="docs/screenshots/2.webp" alt="Store listing editor with locale picker and AI translation" /></td>
-    <td><img src="docs/screenshots/3.webp" alt="Screenshot management with drag-and-drop reorder" /></td>
+    <td><a href="docs/screenshots/1.webp"><img src="docs/screenshots/1.webp" alt="App overview" /></a></td>
+    <td><a href="docs/screenshots/2.webp"><img src="docs/screenshots/2.webp" alt="Store listing" /></a></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/4.webp" alt="TestFlight builds with status, groups, and session tracking" /></td>
-    <td><img src="docs/screenshots/5.webp" alt="Analytics dashboard with downloads, proceeds, and conversion funnel" /></td>
-    <td><img src="docs/screenshots/6.webp" alt="Customer reviews with ratings, filtering, and AI-drafted replies" /></td>
+    <td><a href="docs/screenshots/3.webp"><img src="docs/screenshots/3.webp" alt="Screenshots" /></a></td>
+    <td><a href="docs/screenshots/4.webp"><img src="docs/screenshots/4.webp" alt="TestFlight builds" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="docs/screenshots/5.webp"><img src="docs/screenshots/5.webp" alt="Analytics" /></a></td>
+    <td><a href="docs/screenshots/6.webp"><img src="docs/screenshots/6.webp" alt="Customer reviews" /></a></td>
   </tr>
 </table>
 
