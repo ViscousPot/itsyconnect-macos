@@ -6,7 +6,6 @@ import { randomBytes } from "node:crypto";
 import { createServer as createNetServer } from "node:net";
 import { pathToFileURL } from "node:url";
 import http from "node:http";
-import { updateElectronApp } from "update-electron-app";
 
 const isDev = !app.isPackaged;
 let nextProcess: ChildProcess | null = null;
@@ -351,10 +350,15 @@ if (!gotLock) {
     createWindow(port);
 
     if (!isDev) {
-      updateElectronApp({
-        updateInterval: "1 hour",
-        notifyUser: true,
-      });
+      try {
+        const { updateElectronApp } = require("update-electron-app") as typeof import("update-electron-app");
+        updateElectronApp({
+          updateInterval: "1 hour",
+          notifyUser: true,
+        });
+      } catch (error) {
+        console.warn("Auto-update disabled: update-electron-app is unavailable.", error);
+      }
     }
 
     app.on("activate", () => {
