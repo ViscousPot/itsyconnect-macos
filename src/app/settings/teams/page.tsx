@@ -24,7 +24,6 @@ import {
   XCircle,
   PencilSimple,
 } from "@phosphor-icons/react";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { AddAccountDialog } from "@/components/layout/add-account-dialog";
 import { useLicense } from "@/lib/license-context";
@@ -133,14 +132,7 @@ export default function TeamsPage() {
     });
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner />
-        Loading…
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <>

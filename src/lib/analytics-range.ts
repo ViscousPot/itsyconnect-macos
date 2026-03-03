@@ -91,6 +91,25 @@ function formatCustomLabel(from: string, to: string): string {
   return `${fmtFrom} \u2013 ${fmtTo}`;
 }
 
+/**
+ * Compute percentage change between current and previous period.
+ * Returns null when comparison is meaningless:
+ * - previous value is 0
+ * - previous period has less than 50% of current period's data coverage
+ */
+export function pctChange(
+  current: number,
+  previous: number,
+  currentDays: number,
+  previousDays: number,
+): string | null {
+  if (previous === 0) return null;
+  if (previousDays < currentDays * 0.5) return null;
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct >= 0 ? "+" : "";
+  return `${sign}${pct.toFixed(1)}% from previous period`;
+}
+
 export function filterByDateRange<T extends { date: string }>(
   data: T[],
   range: DateRange,

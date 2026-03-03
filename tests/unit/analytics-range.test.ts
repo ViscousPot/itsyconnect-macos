@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { parseRange, filterByDateRange, previousRange } from "@/lib/analytics-range";
+import { parseRange, filterByDateRange, previousRange, pctChange } from "@/lib/analytics-range";
 
 // Fix "today" to 2026-02-28 for deterministic tests
 beforeEach(() => {
@@ -202,6 +202,30 @@ describe("filterByDateRange", () => {
     const range = parseRange("2025-06");
     const result = filterByDateRange(data, range);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ---------- pctChange ----------
+
+describe("pctChange", () => {
+  it("returns null when previous is 0", () => {
+    expect(pctChange(100, 0, 30, 30)).toBeNull();
+  });
+
+  it("returns null when previous period coverage < 50%", () => {
+    expect(pctChange(100, 5, 30, 14)).toBeNull();
+  });
+
+  it("returns percentage string when coverage is sufficient", () => {
+    expect(pctChange(150, 100, 30, 28)).toBe("+50.0% from previous period");
+  });
+
+  it("returns negative percentage", () => {
+    expect(pctChange(50, 100, 30, 30)).toBe("-50.0% from previous period");
+  });
+
+  it("edge case: exactly 50% coverage returns the percentage", () => {
+    expect(pctChange(200, 100, 30, 15)).toBe("+100.0% from previous period");
   });
 });
 

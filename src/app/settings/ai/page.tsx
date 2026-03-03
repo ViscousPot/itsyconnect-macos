@@ -123,14 +123,7 @@ export default function AISettingsPage() {
     setRemoving(false);
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner />
-        Loading...
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
     <div className="space-y-8">

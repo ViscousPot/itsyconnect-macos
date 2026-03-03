@@ -83,9 +83,7 @@ export function AppSwitcher() {
                 />
               ) : null}
               <span className="truncate font-semibold text-sm">
-                {loading
-                  ? "Loading..."
-                  : activeApp?.name ?? "Select an app"}
+                {activeApp?.name ?? "Select an app"}
               </span>
               <CaretUpDown className="ml-auto" size={16} />
             </SidebarMenuButton>

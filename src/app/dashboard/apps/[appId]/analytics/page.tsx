@@ -29,7 +29,7 @@ import {
 } from "@phosphor-icons/react";
 import { formatDateShort } from "@/lib/format";
 import { useAnalytics } from "@/lib/analytics-context";
-import { parseRange, filterByDateRange, previousRange } from "@/lib/analytics-range";
+import { parseRange, filterByDateRange, previousRange, pctChange } from "@/lib/analytics-range";
 import { KpiCard } from "@/components/kpi-card";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -58,15 +58,6 @@ const funnelConfig = {
   downloads: { label: "First-time downloads", color: "var(--color-chart-1)" },
 } satisfies ChartConfig;
 
-// ---------- Helpers ----------
-
-function pctChange(current: number, previous: number): string | null {
-  if (previous === 0) return null;
-  const pct = ((current - previous) / previous) * 100;
-  const sign = pct >= 0 ? "+" : "";
-  return `${sign}${pct.toFixed(1)}% from previous period`;
-}
-
 // ---------- Page ----------
 
 export default function AnalyticsOverviewPage() {
@@ -88,47 +79,40 @@ export default function AnalyticsOverviewPage() {
     (s, d) => s + d.firstTime + d.redownload,
     0,
   );
-  const prevDownloads = useMemo(
-    () =>
-      filterByDateRange(data?.dailyDownloads ?? [], prevRange).reduce(
-        (s, d) => s + d.firstTime + d.redownload,
-        0,
-      ),
+  const prevDownloadsData = useMemo(
+    () => filterByDateRange(data?.dailyDownloads ?? [], prevRange),
     [data, prevRange],
+  );
+  const prevDownloads = prevDownloadsData.reduce(
+    (s, d) => s + d.firstTime + d.redownload,
+    0,
+  );
+  const prevFirstTime = prevDownloadsData.reduce(
+    (s, d) => s + d.firstTime,
+    0,
   );
 
   const totalRevenue = revenue.reduce((s, d) => s + d.proceeds, 0);
-  const prevRevenue = useMemo(
-    () =>
-      filterByDateRange(data?.dailyRevenue ?? [], prevRange).reduce(
-        (s, d) => s + d.proceeds,
-        0,
-      ),
+  const prevRevenueData = useMemo(
+    () => filterByDateRange(data?.dailyRevenue ?? [], prevRange),
     [data, prevRange],
   );
+  const prevRevenue = prevRevenueData.reduce((s, d) => s + d.proceeds, 0);
 
   const totalFirstTime = downloads.reduce((s, d) => s + d.firstTime, 0);
-  const prevFirstTime = useMemo(
-    () =>
-      filterByDateRange(data?.dailyDownloads ?? [], prevRange).reduce(
-        (s, d) => s + d.firstTime,
-        0,
-      ),
-    [data, prevRange],
-  );
 
   const engagement = useMemo(
     () => filterByDateRange(data?.dailyEngagement ?? [], range),
     [data, range],
   );
   const totalImpressions = engagement.reduce((s, d) => s + d.impressions, 0);
-  const prevImpressions = useMemo(
-    () =>
-      filterByDateRange(data?.dailyEngagement ?? [], prevRange).reduce(
-        (s, d) => s + d.impressions,
-        0,
-      ),
+  const prevEngagementData = useMemo(
+    () => filterByDateRange(data?.dailyEngagement ?? [], prevRange),
     [data, prevRange],
+  );
+  const prevImpressions = prevEngagementData.reduce(
+    (s, d) => s + d.impressions,
+    0,
   );
   const totalPageViews = engagement.reduce((s, d) => s + d.pageViews, 0);
 
@@ -204,25 +188,25 @@ export default function AnalyticsOverviewPage() {
         <KpiCard
           title="Impressions"
           value={totalImpressions.toLocaleString()}
-          subtitle={pctChange(totalImpressions, prevImpressions)}
+          subtitle={pctChange(totalImpressions, prevImpressions, engagement.length, prevEngagementData.length)}
           icon={Eye}
         />
         <KpiCard
           title="Total downloads"
           value={totalDownloads.toLocaleString()}
-          subtitle={pctChange(totalDownloads, prevDownloads)}
+          subtitle={pctChange(totalDownloads, prevDownloads, downloads.length, prevDownloadsData.length)}
           icon={DownloadSimple}
         />
         <KpiCard
           title="Proceeds"
           value={`$${totalRevenue.toLocaleString()}`}
-          subtitle={pctChange(totalRevenue, prevRevenue)}
+          subtitle={pctChange(totalRevenue, prevRevenue, revenue.length, prevRevenueData.length)}
           icon={CurrencyDollar}
         />
         <KpiCard
           title="First-time downloads"
           value={totalFirstTime.toLocaleString()}
-          subtitle={pctChange(totalFirstTime, prevFirstTime)}
+          subtitle={pctChange(totalFirstTime, prevFirstTime, downloads.length, prevDownloadsData.length)}
           icon={Timer}
         />
       </div>

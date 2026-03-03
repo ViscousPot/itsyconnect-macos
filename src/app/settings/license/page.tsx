@@ -86,14 +86,7 @@ export default function LicensePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner />
-        Loading…
-      </div>
-    );
-  }
+  if (loading) return null;
 
   if (isPro) {
     return (
