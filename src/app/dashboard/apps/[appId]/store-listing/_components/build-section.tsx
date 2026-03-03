@@ -25,6 +25,7 @@ export function BuildSection({
   versionBuild,
   versionString,
   onBuildChange,
+  onBuildRemove,
   onRefresh,
   readOnly,
 }: {
@@ -33,6 +34,7 @@ export function BuildSection({
   versionBuild: AscBuild | null;
   versionString: string | undefined;
   onBuildChange: (buildId: string) => void;
+  onBuildRemove: () => void;
   onRefresh: () => void;
   readOnly: boolean;
 }) {
@@ -133,6 +135,9 @@ export function BuildSection({
             {formatBuildDate(selectedBuild.uploadedDate)}
           </p>
         </div>
+        <Button variant="ghost" size="sm" onClick={onBuildRemove}>
+          Remove
+        </Button>
         {picker}
       </div>
     </section>

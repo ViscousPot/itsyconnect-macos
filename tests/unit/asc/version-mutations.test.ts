@@ -211,6 +211,15 @@ describe("version-mutations", () => {
       expect(body.data.type).toBe("builds");
       expect(body.data.id).toBe("build-1");
     });
+
+    it("sends null data to remove the build", async () => {
+      mockAscFetch.mockResolvedValue({});
+
+      await selectBuildForVersion("ver-1", null);
+
+      const body = JSON.parse(mockAscFetch.mock.calls[0][1].body);
+      expect(body.data).toBeNull();
+    });
   });
 
   describe("invalidateVersionsCache", () => {

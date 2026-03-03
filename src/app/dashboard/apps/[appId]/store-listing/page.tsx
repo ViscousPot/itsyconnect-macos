@@ -137,8 +137,8 @@ export default function StoreListingPage() {
   }
   // Build picker state
   const [allBuilds, setAllBuilds] = useState<TFBuild[]>([]);
-  const [selectedBuildId, setSelectedBuildId] = useState<string | null>(null);
-  const originalBuildIdRef = useRef<string | null>(null);
+  const [selectedBuildId, setSelectedBuildId] = useState<string | null>(selectedVersion?.build?.id ?? null);
+  const originalBuildIdRef = useRef<string | null>(selectedVersion?.build?.id ?? null);
 
   const platform = selectedVersion?.attributes.platform;
 
@@ -321,8 +321,8 @@ export default function StoreListingPage() {
           }),
         );
 
-        // Save build selection if changed
-        if (selectedBuildId && selectedBuildId !== originalBuildIdRef.current) {
+        // Save build selection if changed (including removal)
+        if (selectedBuildId !== originalBuildIdRef.current) {
           promises.push(
             fetch(`/api/apps/${appId}/versions/${versionId}`, {
               method: "PATCH",
@@ -579,6 +579,7 @@ export default function StoreListingPage() {
           versionBuild={selectedVersion?.build ?? null}
           versionString={selectedVersion?.attributes.versionString}
           onBuildChange={(id) => { setSelectedBuildId(id); setDirty(true); }}
+          onBuildRemove={() => { setSelectedBuildId(null); setDirty(true); }}
           onRefresh={() => fetchBuilds(true)}
           readOnly={readOnly}
         />

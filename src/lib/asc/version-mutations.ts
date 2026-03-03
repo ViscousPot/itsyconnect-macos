@@ -161,12 +161,12 @@ export async function releaseVersion(versionId: string): Promise<void> {
 
 export async function selectBuildForVersion(
   versionId: string,
-  buildId: string,
+  buildId: string | null,
 ): Promise<void> {
   await ascFetch(`/v1/appStoreVersions/${versionId}/relationships/build`, {
     method: "PATCH",
     body: JSON.stringify({
-      data: { type: "builds", id: buildId },
+      data: buildId ? { type: "builds", id: buildId } : null,
     }),
   });
 }

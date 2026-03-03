@@ -14,9 +14,9 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { versionString, buildId } = body as { versionString?: string; buildId?: string };
+  const { versionString, buildId } = body as { versionString?: string; buildId?: string | null };
 
-  if (!versionString && !buildId) {
+  if (!versionString && buildId === undefined) {
     return NextResponse.json(
       { error: "versionString or buildId is required" },
       { status: 400 },
@@ -27,7 +27,7 @@ export async function PATCH(
     if (versionString) {
       await updateVersionAttributes(versionId, { versionString });
     }
-    if (buildId) {
+    if (buildId !== undefined) {
       await selectBuildForVersion(versionId, buildId);
     }
     invalidateVersionsCache(appId);
