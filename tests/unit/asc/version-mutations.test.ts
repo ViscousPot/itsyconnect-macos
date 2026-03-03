@@ -177,6 +177,44 @@ describe("version-mutations", () => {
       const step3Body = JSON.parse(mockAscFetch.mock.calls[2][1].body);
       expect(step3Body.data.attributes.submitted).toBe(true);
     });
+
+    it("cleans up dangling submission when step 2 fails", async () => {
+      mockAscFetch
+        .mockResolvedValueOnce({ data: { id: "sub-1" } }) // step 1: create
+        .mockRejectedValueOnce(new Error("add item failed")) // step 2: fails
+        .mockResolvedValueOnce(null); // cleanup DELETE
+
+      await expect(submitForReview("app-1", "ver-1", "IOS")).rejects.toThrow("add item failed");
+
+      expect(mockAscFetch).toHaveBeenCalledWith(
+        "/v1/reviewSubmissions/sub-1",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+
+    it("cleans up dangling submission when step 3 fails", async () => {
+      mockAscFetch
+        .mockResolvedValueOnce({ data: { id: "sub-1" } }) // step 1: create
+        .mockResolvedValueOnce({}) // step 2: add item
+        .mockRejectedValueOnce(new Error("confirm failed")) // step 3: fails
+        .mockResolvedValueOnce(null); // cleanup DELETE
+
+      await expect(submitForReview("app-1", "ver-1", "IOS")).rejects.toThrow("confirm failed");
+
+      expect(mockAscFetch).toHaveBeenCalledWith(
+        "/v1/reviewSubmissions/sub-1",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+
+    it("still throws original error when cleanup DELETE also fails", async () => {
+      mockAscFetch
+        .mockResolvedValueOnce({ data: { id: "sub-1" } }) // step 1: create
+        .mockRejectedValueOnce(new Error("add item failed")) // step 2: fails
+        .mockRejectedValueOnce(new Error("delete also failed")); // cleanup also fails
+
+      await expect(submitForReview("app-1", "ver-1", "IOS")).rejects.toThrow("add item failed");
+    });
   });
 
   describe("releaseVersion", () => {

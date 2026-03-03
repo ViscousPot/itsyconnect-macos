@@ -44,8 +44,8 @@ export function computeChecklistFlags(
   primaryLocale: string,
 ): ChecklistFlags {
   return {
-    description: computeFieldIssues(localeData, primaryLocale, "description", FIELD_MIN_LIMITS.description ?? 10),
-    whatsNew: computeFieldIssues(localeData, primaryLocale, "whatsNew", FIELD_MIN_LIMITS.whatsNew ?? 4),
+    description: computeFieldIssues(localeData, primaryLocale, "description", FIELD_MIN_LIMITS.description),
+    whatsNew: computeFieldIssues(localeData, primaryLocale, "whatsNew", FIELD_MIN_LIMITS.whatsNew),
     keywords: computeFieldIssues(localeData, primaryLocale, "keywords", 1),
   };
 }

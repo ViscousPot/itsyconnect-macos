@@ -3168,6 +3168,29 @@ describe("fetchPerfPowerMetrics", () => {
     expect(result.metrics).toEqual([]);
   });
 
+  it("handles missing nested fields (metricCategories, metrics, datasets, points)", async () => {
+    mockCacheGet.mockReturnValue(null);
+
+    mockAscFetch.mockResolvedValueOnce({
+      productData: [
+        { platform: "iOS" }, // no metricCategories
+        { platform: "macOS", metricCategories: [
+          { identifier: "DISK" }, // no metrics
+          { identifier: "LAUNCH", metrics: [
+            { identifier: "launchTime", unit: { displayName: "ms" } }, // no datasets
+            { identifier: "hangRate", unit: { displayName: "s" }, datasets: [
+              { filterCriteria: { device: "all", percentile: "p50" } }, // no points
+            ] },
+          ] },
+        ] },
+      ],
+    });
+
+    const result = await fetchPerfPowerMetrics("app-perf-nested-null");
+    // All products have no usable data – every metric is skipped
+    expect(result.metrics).toEqual([]);
+  });
+
   it("handles missing filterCriteria and unit", async () => {
     mockCacheGet.mockReturnValue(null);
 

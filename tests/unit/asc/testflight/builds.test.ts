@@ -871,6 +871,50 @@ describe("listBuilds – branch coverage", () => {
     expect(result[0].groupIds).toContain("group-single");
     expect(result[0].groupIds).not.toContain("group-null");
   });
+
+  it("skips group and metrics lookups in lite mode", async () => {
+    mockCacheGet.mockReturnValue(null);
+
+    mockAscFetch.mockImplementation((url: string) => {
+      if (url.startsWith("/v1/builds?")) {
+        return Promise.resolve({
+          data: [
+            {
+              id: "b1",
+              type: "builds",
+              attributes: {
+                version: "10",
+                uploadedDate: "2026-02-01T00:00:00Z",
+                expirationDate: null,
+                expired: false,
+                minOsVersion: null,
+                processingState: "VALID",
+                iconAssetToken: null,
+              },
+              relationships: {
+                preReleaseVersion: { data: { id: "prv-1", type: "preReleaseVersions" } },
+                buildBetaDetail: { data: { id: "bbd-1", type: "buildBetaDetails" } },
+                betaBuildLocalizations: { data: [] },
+              },
+            },
+          ],
+          included: [
+            { id: "prv-1", type: "preReleaseVersions", attributes: { version: "1.0", platform: "IOS" } },
+            { id: "bbd-1", type: "buildBetaDetails", attributes: { internalBuildState: "IN_BETA_TESTING", externalBuildState: null } },
+          ],
+        });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    const result = await listBuilds("app-lite", false, { lite: true });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].groupIds).toEqual([]);
+    expect(result[0].metrics).toBeUndefined();
+    // listGroups should not have been called
+    expect(mockListGroups).not.toHaveBeenCalled();
+  });
 });
 
 // ── Branch coverage: fetchBuildMetrics edge cases ───────────────

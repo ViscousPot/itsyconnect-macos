@@ -100,6 +100,24 @@ describe("computeFieldIssues", () => {
     const result = computeFieldIssues(data, "en-US", "description", 10);
     expect(result).toEqual({ status: "missing", localesWithIssues: [] });
   });
+
+  it("treats undefined field on primary locale as length 0", () => {
+    // Field key absent entirely – exercises the ?.length ?? 0 fallback
+    const data = { "en-US": { keywords: "ok", whatsNew: "ok" } as LocaleFields };
+    const result = computeFieldIssues(data, "en-US", "description", 10);
+    expect(result).toEqual({ status: "missing", localesWithIssues: [] });
+  });
+
+  it("treats undefined field on secondary locale as length 0", () => {
+    const data = makeLocaleData({
+      "en-US": { description: "A valid description text" },
+    });
+    // Manually add a secondary locale missing the description field
+    data["it"] = { keywords: "k", whatsNew: "w", promotionalText: "", supportUrl: "", marketingUrl: "" } as LocaleFields;
+    const result = computeFieldIssues(data, "en-US", "description", 10);
+    expect(result.status).toBe("warn");
+    expect(result.localesWithIssues).toEqual(["it"]);
+  });
 });
 
 describe("computeChecklistFlags", () => {

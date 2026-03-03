@@ -289,6 +289,28 @@ describe("getDiagnosticLogs", () => {
     expect(root.subFrames![0].subFrames![0].symbolName).toBe("grandchild");
   });
 
+  it("handles non-array callStacks and callStackRootFrames gracefully", async () => {
+    mockAscFetch.mockResolvedValue({
+      data: [
+        {
+          attributes: {
+            callStackTree: [
+              { callStacks: "not-an-array" }, // non-array callStacks
+              { callStacks: [
+                { callStackRootFrames: "also-not-an-array" }, // non-array rootFrames
+                { /* missing callStackRootFrames */ },
+              ] },
+            ],
+          },
+        },
+      ],
+    });
+
+    const result = await getDiagnosticLogs("sig-1");
+    expect(result).toHaveLength(1);
+    expect(result[0].callStack).toEqual([]);
+  });
+
   it("returns empty array on error (best-effort)", async () => {
     const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     mockAscFetch.mockRejectedValue(new Error("network error"));
