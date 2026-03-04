@@ -15,6 +15,13 @@
       "when": 1772611200000,
       "tag": "0001_license_activations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772633745043,
+      "tag": "0002_narrow_miracleman",
+      "breakpoints": true
     }
   ]
 }

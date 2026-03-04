@@ -57,6 +57,15 @@ export const licenseActivations = sqliteTable("license_activations", {
     .$defaultFn(() => new Date().toISOString()),
 });
 
+// --- Analytics backfill tracking ---
+
+export const analyticsBackfill = sqliteTable("analytics_backfill", {
+  appId: text("app_id").primaryKey(),
+  completedAt: text("completed_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 // --- Feedback completed tracking ---
 
 export const feedbackCompleted = sqliteTable("feedback_completed", {

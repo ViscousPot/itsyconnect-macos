@@ -1,6 +1,9 @@
 import { gunzipSync } from "node:zlib";
+import { eq } from "drizzle-orm";
 import { ascFetch } from "./client";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { db } from "@/db";
+import { analyticsBackfill } from "@/db/schema";
 
 const ANALYTICS_TTL = 60 * 60 * 1000; // 1 hour (sync worker refreshes hourly)
 const REPORT_ID_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days (report request/report IDs never change)
@@ -155,8 +158,7 @@ async function findReportRequestIds(appId: string): Promise<string[]> {
     .filter((r) => r.attributes.accessType === "ONGOING" || r.attributes.accessType === "ONE_TIME_SNAPSHOT")
     .map((r) => r.id);
 
-  console.log(`[analytics] Found ${response.data.length} report requests for app ${appId}:`,
-    response.data.map((r) => `${r.id} (${r.attributes.accessType})`));
+  console.log(`[analytics] ${appId}: ${ids.length} report requests (${response.data.map((r) => r.attributes.accessType).join(", ")})`);
 
   reportRequestIdsCache.set(appId, ids);
   cacheSet(dbKey, ids, REPORT_ID_TTL);
@@ -299,12 +301,10 @@ async function fetchReportData(
 
     let url: string | undefined =
       `/v1/analyticsReports/${reportId}/instances?filter[granularity]=${granularity}&limit=${Math.min(limit, 200)}`;
-    let pageCount = 0;
 
     while (url && uniqueInstances.length < maxInstances) {
       const resp: AscListResponse<AscReportInstance> =
         await ascFetch<AscListResponse<AscReportInstance>>(url);
-      pageCount++;
 
       for (const inst of resp.data) {
         const date = inst.attributes.processingDate;
@@ -316,11 +316,7 @@ async function fetchReportData(
 
       url = resp.links?.next;
     }
-
-    console.log(`[analytics] ${reportName} from request ${requestId}: ${pageCount} page(s)`);
   }
-
-  console.log(`[analytics] ${reportName}: ${uniqueInstances.length} unique instances`);
 
   if (uniqueInstances.length === 0) return [];
 
@@ -783,51 +779,17 @@ function emptyAnalyticsData(): AnalyticsData {
   };
 }
 
-// ---------- Main entry point ----------
+// ---------- Build phase helper ----------
 
-const inFlight = new Map<string, Promise<AnalyticsData>>();
-
-export function buildAnalyticsData(appId: string): Promise<AnalyticsData> {
-  const cacheKey = `analytics:${appId}`;
-  const cached = cacheGet<AnalyticsData>(cacheKey);
-  if (cached) return Promise.resolve(cached);
-
-  // Deduplicate concurrent builds for the same app
-  const existing = inFlight.get(appId);
-  if (existing) return existing;
-
-  const promise = (async () => {
-    console.log(`[analytics] Fetching ${appId}...`);
-    const start = Date.now();
-    const data = await buildAnalyticsDataInner(appId, cacheKey);
-    console.log(`[analytics] Done ${appId} in ${((Date.now() - start) / 1000).toFixed(1)}s`);
-    return data;
-  })().finally(() => inFlight.delete(appId));
-
-  inFlight.set(appId, promise);
-  return promise;
-}
-
-async function buildAnalyticsDataInner(
+async function buildPhase(
+  requestIds: string[],
   appId: string,
-  cacheKey: string,
+  maxInstances: number,
 ): Promise<AnalyticsData> {
-
-  const requestIds = await findReportRequestIds(appId);
-  if (requestIds.length === 0) {
-    // No analytics report requests exist – return empty data.
-    // User needs to enable analytics reports in App Store Connect.
-    const empty = emptyAnalyticsData();
-    cacheSet(cacheKey, empty, ANALYTICS_TTL);
-    return empty;
-  }
-
-  // Fetch all report types in parallel.
-  // Each fetchReportData call queries ALL request IDs (ONGOING + SNAPSHOT)
-  // and deduplicates instances by date. Per-instance caching ensures
-  // only new/today's data is downloaded on refresh.
-  // perfPowerMetrics is a separate API, started concurrently.
   const perfPromise = fetchPerfPowerMetrics(appId);
+
+  // Crash reports are monthly – always cap at 24 (2 years)
+  const crashMax = Math.min(maxInstances, 24);
 
   const [
     downloadRows,
@@ -840,23 +802,21 @@ async function buildAnalyticsDataInner(
     crashRows,
     expandedCrashRows,
   ] = await Promise.all([
-    fetchReportData(requestIds, "COMMERCE", "App Downloads Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "COMMERCE", "App Store Purchases Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_STORE_ENGAGEMENT", "App Store Discovery and Engagement Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_STORE_ENGAGEMENT", "App Store Web Preview Engagement Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_USAGE", "App Sessions Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_USAGE", "App Store Installation and Deletion Standard", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_USAGE", "App Opt In", "DAILY", 200, 365),
-    fetchReportData(requestIds, "APP_USAGE", "App Crashes", "MONTHLY", 24, 24),
-    fetchReportData(requestIds, "PERFORMANCE", "App Crashes Expanded", "DAILY", 200, 365),
+    fetchReportData(requestIds, "COMMERCE", "App Downloads Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "COMMERCE", "App Store Purchases Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_STORE_ENGAGEMENT", "App Store Discovery and Engagement Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_STORE_ENGAGEMENT", "App Store Web Preview Engagement Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_USAGE", "App Sessions Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_USAGE", "App Store Installation and Deletion Standard", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_USAGE", "App Opt In", "DAILY", 200, maxInstances),
+    fetchReportData(requestIds, "APP_USAGE", "App Crashes", "MONTHLY", 24, crashMax),
+    fetchReportData(requestIds, "PERFORMANCE", "App Crashes Expanded", "DAILY", 200, maxInstances),
   ]);
 
   const perfData = await perfPromise;
 
-  // Filter rows by app's Apple ID (numeric) if present
   const filterByApp = (rows: Array<Record<string, string>>) => {
     if (rows.length === 0) return rows;
-    // If rows have "App Apple Identifier", filter by appId
     if (rows[0]["App Apple Identifier"]) {
       return rows.filter((r) => r["App Apple Identifier"] === appId);
     }
@@ -873,7 +833,7 @@ async function buildAnalyticsDataInner(
   const filteredCrashes = filterByApp(crashRows);
   const filteredExpandedCrashes = filterByApp(expandedCrashRows);
 
-  const data: AnalyticsData = {
+  return {
     dailyDownloads: aggregateDownloads(filteredDownloads),
     dailyRevenue: aggregateRevenue(filteredPurchases),
     dailyEngagement: aggregateEngagement(filteredEngagement),
@@ -892,19 +852,101 @@ async function buildAnalyticsDataInner(
     perfMetrics: perfData.metrics,
     perfRegressions: perfData.regressions,
   };
+}
 
-  // Log date coverage for key series
-  const logRange = (label: string, series: Array<{ date: string }>) => {
-    if (series.length === 0) return console.log(`[analytics] ${label}: no data`);
-    console.log(`[analytics] ${label}: ${series.length} days, ${series[0].date} → ${series[series.length - 1].date}`);
-  };
-  logRange("Downloads", data.dailyDownloads);
-  logRange("Revenue", data.dailyRevenue);
-  logRange("Engagement", data.dailyEngagement);
-  logRange("Sessions", data.dailySessions);
-  logRange("Daily crashes", data.dailyCrashes);
-  console.log(`[analytics] perfMetrics: ${perfData.metrics.length} series, ${perfData.regressions.length} regressions`);
+// ---------- Background backfill ----------
+
+const backfilling = new Set<string>();
+
+function isBackfilled(appId: string): boolean {
+  const row = db.select().from(analyticsBackfill).where(eq(analyticsBackfill.appId, appId)).get();
+  return !!row;
+}
+
+function markBackfilled(appId: string): void {
+  db.insert(analyticsBackfill).values({ appId }).onConflictDoNothing().run();
+}
+
+function dataPointCount(data: AnalyticsData): number {
+  return data.dailyDownloads.length + data.dailySessions.length + data.dailyRevenue.length;
+}
+
+function startBackfill(requestIds: string[], appId: string, cacheKey: string) {
+  if (backfilling.has(appId)) return;
+  backfilling.add(appId);
+
+  (async () => {
+    const DEPTHS = [60, 120, 240, 480, Infinity];
+    let prevCount = 0;
+    for (const depth of DEPTHS) {
+      const label = depth === Infinity ? "all" : String(depth);
+      const start = Date.now();
+      const data = await buildPhase(requestIds, appId, depth);
+      cacheSet(cacheKey, data, ANALYTICS_TTL);
+      const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+      const count = dataPointCount(data);
+      console.log(`[analytics] Backfill ${appId}: depth=${label}, ${count} pts, ${elapsed}s`);
+      if (count <= prevCount) break;
+      prevCount = count;
+      if (depth === Infinity) break;
+    }
+    markBackfilled(appId);
+    console.log(`[analytics] Backfill complete for ${appId}`);
+  })()
+    .catch((err) => console.error(`[analytics] Backfill failed for ${appId}:`, err))
+    .finally(() => backfilling.delete(appId));
+}
+
+// ---------- Main entry point ----------
+
+const inFlight = new Map<string, Promise<AnalyticsData>>();
+
+export function buildAnalyticsData(appId: string): Promise<AnalyticsData> {
+  const cacheKey = `analytics:${appId}`;
+  const cached = cacheGet<AnalyticsData>(cacheKey);
+  if (cached) return Promise.resolve(cached);
+
+  // Deduplicate concurrent builds for the same app
+  const existing = inFlight.get(appId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    console.log(`[analytics] Building ${appId}...`);
+    return await buildAnalyticsDataInner(appId, cacheKey);
+  })().finally(() => inFlight.delete(appId));
+
+  inFlight.set(appId, promise);
+  return promise;
+}
+
+async function buildAnalyticsDataInner(
+  appId: string,
+  cacheKey: string,
+): Promise<AnalyticsData> {
+  const requestIds = await findReportRequestIds(appId);
+  if (requestIds.length === 0) {
+    const empty = emptyAnalyticsData();
+    cacheSet(cacheKey, empty, ANALYTICS_TTL);
+    return empty;
+  }
+
+  // Phase 1: fetch recent 30 instances for fast initial load
+  const phase1Start = Date.now();
+  const data = await buildPhase(requestIds, appId, 30);
+  const phase1Ms = Date.now() - phase1Start;
+
+  const dlDays = data.dailyDownloads.length;
+  const revDays = data.dailyRevenue.length;
+  const sessDays = data.dailySessions.length;
+  console.log(`[analytics] ${appId}: phase 1 in ${(phase1Ms / 1000).toFixed(1)}s – ${dlDays}d downloads, ${revDays}d revenue, ${sessDays}d sessions`);
 
   cacheSet(cacheKey, data, ANALYTICS_TTL);
+
+  // Phase 2: backfill all historical data (fire-and-forget).
+  // Only runs once per app – the DB flag persists across restarts.
+  if (!isBackfilled(appId)) {
+    startBackfill(requestIds, appId, cacheKey);
+  }
+
   return data;
 }
