@@ -161,7 +161,7 @@ export function DashboardBreadcrumb() {
           </>
         ) : (
           <BreadcrumbItem>
-            <BreadcrumbPage>Dashboard</BreadcrumbPage>
+            <BreadcrumbPage>Portfolio</BreadcrumbPage>
           </BreadcrumbItem>
         )}
       </BreadcrumbList>

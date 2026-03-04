@@ -7,7 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useApps } from "@/lib/apps-context";
 import { useFormDirty } from "@/lib/form-dirty-context";
 import { AppIcon } from "@/components/app-icon";
-import { getAppState } from "@/lib/nav-state";
+import { getAppState, getLastAppId } from "@/lib/nav-state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,7 +31,8 @@ export function AppSwitcher() {
   const { guardNavigation } = useFormDirty();
   const [search, setSearch] = useState("");
 
-  const activeApp = apps.find((a) => a.id === appId);
+  const activeApp = apps.find((a) => a.id === appId)
+    ?? apps.find((a) => a.id === getLastAppId());
 
   const filteredApps = useMemo(() => {
     if (!search) return apps;

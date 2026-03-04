@@ -47,6 +47,12 @@ export function getLastUrl(): string | undefined {
   return lastUrl && lastUrl.startsWith(APP_PREFIX) ? lastUrl : undefined;
 }
 
+export function getLastAppId(): string | undefined {
+  const url = getLastUrl();
+  if (!url) return undefined;
+  return url.slice(APP_PREFIX.length).split("/")[0] || undefined;
+}
+
 export function getAppState(appId: string): string | undefined {
   const sub = read().apps[appId];
   return sub !== undefined ? sub : undefined;

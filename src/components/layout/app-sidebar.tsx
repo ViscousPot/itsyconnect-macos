@@ -1,7 +1,10 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { Package } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { Package, SquaresFour } from "@phosphor-icons/react";
+import { getLastAppId } from "@/lib/nav-state";
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useLicense } from "@/lib/license-context";
+import { useFormDirty } from "@/lib/form-dirty-context";
 import { AppSwitcher } from "./app-switcher";
 import { NavMain } from "./nav-main";
 import { NavFooter } from "./nav-footer";
@@ -46,8 +50,40 @@ function ProBanner() {
   );
 }
 
+function PortfolioButton() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isDirty, guardNavigation } = useFormDirty();
+  const isActive = pathname === "/dashboard";
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild tooltip="Portfolio" isActive={isActive}>
+          <Link
+            href="/dashboard"
+            onNavigate={(e) => {
+              if (!isDirty) return;
+              e.preventDefault();
+              guardNavigation(() => router.push("/dashboard"));
+            }}
+          >
+            <SquaresFour size={16} />
+            <span>Portfolio</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
+
 export function AppSidebar() {
   const { appId } = useParams<{ appId?: string }>();
+  const [lastAppId, setLastAppId] = useState<string>();
+  useEffect(() => {
+    if (!appId) setLastAppId(getLastAppId());
+  }, [appId]);
+  const navAppId = appId ?? lastAppId;
 
   return (
     <Sidebar collapsible="icon">
@@ -57,12 +93,13 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {appId && <NavMain appId={appId} />}
+        {navAppId && <NavMain appId={navAppId} />}
       </SidebarContent>
       <div className="no-drag px-2 pb-2">
         <ProBanner />
       </div>
       <SidebarFooter>
+        <PortfolioButton />
         <NavFooter />
       </SidebarFooter>
     </Sidebar>
