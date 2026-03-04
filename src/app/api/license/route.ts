@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getLicense, setLicense, clearLicense, maskKey } from "@/lib/license";
+import { IS_MAS } from "@/lib/license-shared";
 import { parseBody } from "@/lib/api-helpers";
 
 export async function GET() {
@@ -8,6 +9,10 @@ export async function GET() {
 
   if (!license) {
     return NextResponse.json({ isPro: false });
+  }
+
+  if (license.key === "storekit") {
+    return NextResponse.json({ isPro: true, source: "storekit" });
   }
 
   return NextResponse.json({
@@ -36,6 +41,10 @@ interface LsActivationResponse {
 }
 
 export async function POST(request: Request) {
+  if (IS_MAS) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const parsed = await parseBody(request, activateSchema);
   if (parsed instanceof Response) return parsed;
 
@@ -91,6 +100,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
+  if (IS_MAS) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
   const license = getLicense();
 
   if (!license) {

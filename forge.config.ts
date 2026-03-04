@@ -4,6 +4,8 @@ import { MakerDMG } from "@electron-forge/maker-dmg";
 import { MakerZIP } from "@electron-forge/maker-zip";
 import { BUILD_NUMBER } from "./src/lib/version";
 
+const isMAS = process.env.MAS === "1";
+
 const config: ForgeConfig = {
   packagerConfig: {
     appBundleId: "com.itsyconnect.app",
@@ -12,14 +14,18 @@ const config: ForgeConfig = {
     buildVersion: BUILD_NUMBER,
     icon: "public/icon",
     asar: false,
-    osxSign: process.env.APPLE_TEAM_ID ? {} : undefined,
-    osxNotarize: process.env.APPLE_ID
-      ? {
-          appleId: process.env.APPLE_ID,
-          appleIdPassword: process.env.APPLE_ID_PASSWORD!,
-          teamId: process.env.APPLE_TEAM_ID!,
-        }
-      : undefined,
+    osxSign: isMAS
+      ? { type: "distribution", optionsForFile: () => ({ entitlements: "entitlements.mas.plist" }) }
+      : process.env.APPLE_TEAM_ID ? {} : undefined,
+    osxNotarize: isMAS
+      ? undefined
+      : process.env.APPLE_ID
+        ? {
+            appleId: process.env.APPLE_ID,
+            appleIdPassword: process.env.APPLE_ID_PASSWORD!,
+            teamId: process.env.APPLE_TEAM_ID!,
+          }
+        : undefined,
     ignore: (filePath: string) => {
       if (!filePath) return false;
       if (filePath === "/package.json") return false;

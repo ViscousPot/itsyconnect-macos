@@ -51,6 +51,13 @@ declare global {
         getAutoCheck: () => Promise<boolean>;
         setAutoCheck: (enabled: boolean) => void;
       };
+      store: {
+        purchase: () => Promise<void>;
+        restore: () => Promise<void>;
+        getProduct: () => Promise<{ title: string; price: string } | null>;
+        onLicenseUpdated: (cb: () => void) => () => void;
+        onError: (cb: (message: string) => void) => () => void;
+      };
     };
   }
 }

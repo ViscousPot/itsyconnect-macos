@@ -16,6 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useLicense } from "@/lib/license-context";
+import { IS_MAS } from "@/lib/license-shared";
 import { useFormDirty } from "@/lib/form-dirty-context";
 import { AppSwitcher } from "./app-switcher";
 import { NavMain } from "./nav-main";
@@ -37,7 +38,7 @@ function ProBanner() {
         <div className="flex items-center gap-2.5">
           <Package size={16} weight="duotone" className="shrink-0 text-blue-500" />
           <div className="grid leading-tight">
-            <span className="truncate text-xs font-medium text-blue-600 dark:text-blue-400">Get Pro</span>
+            <span className="truncate text-xs font-medium text-blue-600 dark:text-blue-400">{IS_MAS ? "Upgrade to Pro" : "Get Pro"}</span>
             <span className="truncate text-[11px] text-blue-500/70">
               Unlimited apps &amp; teams
             </span>

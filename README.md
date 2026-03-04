@@ -52,7 +52,7 @@ Everything runs locally. One SQLite database, no cloud, no accounts, no telemetr
 
 ## Free vs Pro
 
-Itsyconnect is free to use with one app and one developer account. A one-time Pro licence removes all limits – unlimited apps and accounts. Licences are handled via [LemonSqueezy](https://store.itsyapps.com).
+Itsyconnect is free to use with one app and one developer account. A one-time Pro upgrade removes all limits – unlimited apps and accounts.
 
 | | Free | Pro |
 |---|---|---|
@@ -60,6 +60,10 @@ Itsyconnect is free to use with one app and one developer account. A one-time Pr
 | Developer accounts | 1 | Unlimited |
 | All features | Yes | Yes |
 | Price | Free | One-time purchase |
+
+**Direct distribution** – licences are handled via [LemonSqueezy](https://store.itsyapps.com) (key-based activation).
+
+**Mac App Store** – Pro is available as a StoreKit in-app purchase (non-consumable, one-time).
 
 ## Quick start
 
@@ -76,7 +80,8 @@ The setup wizard will guide you through connecting your App Store Connect creden
 
 ```bash
 npm run electron:dev          # Launch Electron with hot reload
-npm run electron:make:dmg     # Build signed DMG (dev/testing)
+npm run electron:make:dmg     # Build signed DMG (direct distribution)
+npm run electron:make:mas     # Build for Mac App Store (MAS=1)
 npm run test                  # Run tests
 npm run test:watch            # Watch mode
 npm run test:coverage         # Coverage report
@@ -84,6 +89,44 @@ npm run db:generate           # Generate Drizzle migration
 npm run db:studio             # Drizzle Studio
 npm run lint                  # ESLint
 ```
+
+### MAS builds
+
+The `MAS=1` environment variable switches the app from LemonSqueezy to StoreKit for the Pro upgrade. It is set automatically by the `electron:make:mas` script.
+
+To test MAS mode during development:
+
+```bash
+MAS=1 npm run electron:dev
+```
+
+This shows the StoreKit UI (buy/restore buttons) on the licence page instead of the LemonSqueezy key input. The auto-updater is disabled in MAS mode.
+
+### Testing the StoreKit API locally
+
+While running `MAS=1 npm run electron:dev`, you can simulate StoreKit activations via curl:
+
+```bash
+# Activate (simulates a successful purchase)
+curl -X POST http://127.0.0.1:3000/api/license/storekit \
+  -H "Content-Type: application/json" \
+  -d '{"transactionId": "test-txn-123"}'
+
+# Check licence status
+curl http://127.0.0.1:3000/api/license
+
+# Deactivate
+curl -X DELETE http://127.0.0.1:3000/api/license/storekit
+```
+
+### Testing real StoreKit purchases
+
+Real purchases require a signed MAS build and an Apple sandbox tester:
+
+1. Register the product `com.itsyconnect.app.pro` (non-consumable) in App Store Connect
+2. Create a sandbox tester under Users and Access → Sandbox
+3. Build with `npm run electron:make:mas` using your distribution certificate
+4. Run the signed build, sign into the sandbox account when prompted, then purchase
 
 ## Architecture
 
@@ -105,6 +148,8 @@ Electron app
 
 ## Releasing a new version
 
+### Direct distribution
+
 The app auto-updates via [update.electronjs.org](https://update.electronjs.org), which reads from public GitHub Releases.
 
 1. Bump `APP_VERSION` and `BUILD_NUMBER` in `src/lib/version.ts`, and `"version"` in `package.json`
@@ -118,6 +163,16 @@ The app auto-updates via [update.electronjs.org](https://update.electronjs.org),
 5. `update.electronjs.org` picks up the new release – existing users are prompted to restart and update
 
 Users can also check manually via **Itsyconnect > Check for updates…** in the menu bar.
+
+### Mac App Store
+
+MAS builds use Apple's distribution signing and skip notarization (Apple reviews MAS apps separately). The auto-updater is disabled – updates go through the App Store.
+
+```bash
+npm run electron:make:mas
+```
+
+Submit the resulting package via Transporter or `xcrun altool`.
 
 ## License
 

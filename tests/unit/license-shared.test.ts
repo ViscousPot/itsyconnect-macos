@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { FREE_LIMITS, CHECKOUT_URL, maskKey } from "@/lib/license-shared";
+import { FREE_LIMITS, CHECKOUT_URL, IS_MAS, maskKey } from "@/lib/license-shared";
 
 describe("license-shared", () => {
+  describe("IS_MAS", () => {
+    it("is false when NEXT_PUBLIC_MAS is not set", () => {
+      expect(IS_MAS).toBe(false);
+    });
+  });
+
   describe("FREE_LIMITS", () => {
     it("has apps and teams limits", () => {
       expect(FREE_LIMITS.apps).toBe(1);

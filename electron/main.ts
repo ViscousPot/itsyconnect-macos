@@ -1,4 +1,4 @@
-import { app, autoUpdater, BrowserWindow, dialog, Menu, safeStorage, ipcMain, screen, shell, protocol, net } from "electron";
+import { app, autoUpdater, BrowserWindow, dialog, inAppPurchase, Menu, safeStorage, ipcMain, screen, shell, protocol, net } from "electron";
 import { spawn, ChildProcess } from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import http from "node:http";
 
 const isDev = !app.isPackaged;
+const isMAS = process.env.MAS === "1";
 let nextProcess: ChildProcess | null = null;
 // --- Update settings persistence ---
 
@@ -206,13 +207,76 @@ function waitForServer(port: number, timeout = 30_000): Promise<void> {
   });
 }
 
+// --- StoreKit In-App Purchase (MAS builds only) ---
+
+const STOREKIT_PRODUCT_ID = "com.itsyconnect.app.pro";
+
+function setupStoreKit(port: number): void {
+  if (!isMAS) return;
+
+  inAppPurchase.on("transactions-updated", (_event, transactions) => {
+    for (const tx of transactions) {
+      switch (tx.transactionState) {
+        case "purchased":
+        case "restored": {
+          const body = JSON.stringify({ transactionId: String(tx.transactionIdentifier) });
+          const req = http.request(
+            {
+              hostname: "127.0.0.1",
+              port,
+              path: "/api/license/storekit",
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+            },
+            (res) => {
+              res.resume();
+              if (res.statusCode === 200) {
+                mainWindow?.webContents.send("license-updated");
+              }
+            },
+          );
+          req.write(body);
+          req.end();
+          inAppPurchase.finishTransactionByDate(tx.transactionDate);
+          break;
+        }
+        case "failed":
+          mainWindow?.webContents.send("storekit-error", tx.errorMessage ?? "Purchase failed");
+          inAppPurchase.finishTransactionByDate(tx.transactionDate);
+          break;
+        case "purchasing":
+          // Transaction in progress – no action needed
+          break;
+      }
+    }
+  });
+
+  ipcMain.handle("storekit-purchase", () => {
+    inAppPurchase.purchaseProduct(STOREKIT_PRODUCT_ID);
+  });
+
+  ipcMain.handle("storekit-restore", () => {
+    inAppPurchase.restoreCompletedTransactions();
+  });
+
+  ipcMain.handle("storekit-product", async () => {
+    const products = await inAppPurchase.getProducts([STOREKIT_PRODUCT_ID]);
+    const product = products[0];
+    if (!product) return null;
+    return {
+      title: product.localizedTitle,
+      price: product.formattedPrice,
+    };
+  });
+}
+
 // --- Auto-updater ---
 
 let checkSource: "menu" | "settings" | "auto" = "auto";
 let updateInterval: ReturnType<typeof setInterval> | null = null;
 
 function setupAutoUpdater(): void {
-  if (isDev) return;
+  if (isDev || isMAS) return;
 
   const feedURL = `https://update.electronjs.org/nickustinov/itsyconnect-macos/${process.platform}-${process.arch}/${app.getVersion()}`;
   autoUpdater.setFeedURL({ url: feedURL });
@@ -442,6 +506,7 @@ if (!gotLock) {
     if (!isDev) registerProtocolProxy(port);
     createWindow(port);
     setupMenu();
+    setupStoreKit(port);
     setupAutoUpdater();
 
     // --- Update IPC handlers ---

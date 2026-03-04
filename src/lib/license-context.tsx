@@ -40,6 +40,12 @@ export function LicenseProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    return window.electron?.store?.onLicenseUpdated(() => {
+      refresh();
+    });
+  }, [refresh]);
+
   return (
     <LicenseContext.Provider value={{ isPro, email, loading, refresh }}>
       {children}
