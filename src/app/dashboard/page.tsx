@@ -292,17 +292,17 @@ export default function DashboardPage() {
         />
         <KpiCard
           title="Total proceeds"
-          value={anyLoaded ? `$${totalProceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "–"}
+          value={anyLoaded ? `$${totalProceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "–"}
           icon={CurrencyDollar}
         />
         <KpiCard
           title="Proceeds last 7 days"
-          value={anyLoaded ? `$${proceeds7d.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "–"}
+          value={anyLoaded ? `$${proceeds7d.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "–"}
           icon={CurrencyDollar}
         />
         <KpiCard
           title="Proceeds yesterday"
-          value={anyLoaded ? `$${proceedsYesterday.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "–"}
+          value={anyLoaded ? `$${proceedsYesterday.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "–"}
           icon={CurrencyDollar}
         />
       </div>
@@ -351,7 +351,7 @@ export default function DashboardPage() {
                         <div className="flex flex-1 items-center justify-between gap-2 leading-none">
                           <span className="text-muted-foreground">{name}</span>
                           <span className="font-mono font-medium tabular-nums">
-                            ${(value as number).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ${(value as number).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           </span>
                         </div>
                       )}
@@ -457,7 +457,7 @@ function AppCardStats({ data }: { data: AnalyticsData }) {
       </div>
       <div>
         <p className="text-muted-foreground">Proceeds</p>
-        <p className="font-medium">${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+        <p className="font-medium">${proceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
       </div>
       {crashFree && (
         <div>

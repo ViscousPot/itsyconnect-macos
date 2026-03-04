@@ -785,16 +785,27 @@ function emptyAnalyticsData(): AnalyticsData {
 
 // ---------- Main entry point ----------
 
-export async function buildAnalyticsData(appId: string): Promise<AnalyticsData> {
+const inFlight = new Map<string, Promise<AnalyticsData>>();
+
+export function buildAnalyticsData(appId: string): Promise<AnalyticsData> {
   const cacheKey = `analytics:${appId}`;
   const cached = cacheGet<AnalyticsData>(cacheKey);
-  if (cached) return cached;
+  if (cached) return Promise.resolve(cached);
 
-  console.log(`[analytics] Fetching ${appId}...`);
-  const start = Date.now();
-  const data = await buildAnalyticsDataInner(appId, cacheKey);
-  console.log(`[analytics] Done ${appId} in ${((Date.now() - start) / 1000).toFixed(1)}s`);
-  return data;
+  // Deduplicate concurrent builds for the same app
+  const existing = inFlight.get(appId);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    console.log(`[analytics] Fetching ${appId}...`);
+    const start = Date.now();
+    const data = await buildAnalyticsDataInner(appId, cacheKey);
+    console.log(`[analytics] Done ${appId} in ${((Date.now() - start) / 1000).toFixed(1)}s`);
+    return data;
+  })().finally(() => inFlight.delete(appId));
+
+  inFlight.set(appId, promise);
+  return promise;
 }
 
 async function buildAnalyticsDataInner(
