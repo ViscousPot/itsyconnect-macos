@@ -63,14 +63,16 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isEntry || loading || apps.length === 0) return;
     const saved = getLastUrl();
-    if (!saved || saved === "/dashboard") {
+    // Explicitly saved as portfolio – stay here
+    if (saved === "/dashboard") {
       router.replace("/dashboard");
       return;
     }
-    const savedAppId = saved.match(/^\/dashboard\/apps\/([^/?]+)/)?.[1];
+    // Restore last app URL if valid, otherwise go to first app
+    const savedAppId = saved?.match(/^\/dashboard\/apps\/([^/?]+)/)?.[1];
     const appIds = new Set(apps.map((a) => a.id));
     const target = savedAppId && appIds.has(savedAppId)
-      ? saved
+      ? saved!
       : `/dashboard/apps/${apps[0].id}`;
     router.replace(target);
   }, [isEntry, apps, loading, router]);

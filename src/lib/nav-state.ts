@@ -30,11 +30,11 @@ const DASHBOARD = "/dashboard";
 export function saveNavigation(pathname: string, search: string): void {
   if (!pathname.startsWith(DASHBOARD)) return;
 
-  // Strip transient params that shouldn't persist
+  // Skip transient entry navigation – the redirect will save the real URL
   const params = new URLSearchParams(search);
-  params.delete("entry");
-  const cleaned = params.toString();
-  const suffix = cleaned ? `?${cleaned}` : "";
+  if (params.has("entry")) return;
+
+  const suffix = search ? `?${search}` : "";
 
   const state = read();
   state.lastUrl = pathname + suffix;

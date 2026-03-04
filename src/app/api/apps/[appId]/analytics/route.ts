@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { hasCredentials } from "@/lib/asc/client";
 import { cacheGet, cacheGetMeta } from "@/lib/cache";
-import type { AnalyticsData } from "@/lib/asc/analytics";
+import { buildAnalyticsData, type AnalyticsData } from "@/lib/asc/analytics";
+
+// Track in-flight builds to avoid duplicate work
+const building = new Set<string>();
 
 export async function GET(
   request: Request,
@@ -17,6 +20,14 @@ export async function GET(
   if (data) {
     const meta = cacheGetMeta(`analytics:${appId}`);
     return NextResponse.json({ data, meta });
+  }
+
+  // No cached data – trigger background build if not already in progress
+  if (!building.has(appId)) {
+    building.add(appId);
+    buildAnalyticsData(appId)
+      .catch((err) => console.error(`[analytics] Background build failed for ${appId}:`, err))
+      .finally(() => building.delete(appId));
   }
 
   return NextResponse.json({ data: null, pending: true });

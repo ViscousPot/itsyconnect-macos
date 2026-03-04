@@ -43,9 +43,10 @@ describe("nav-state", () => {
       expect(getAppState("app-1")).toBe("/details");
     });
 
-    it("strips entry param from saved URL", () => {
+    it("skips saving when entry param is present", () => {
+      saveNavigation("/dashboard/apps/app-1/details", "");
       saveNavigation("/dashboard", "entry=1");
-      expect(getLastUrl()).toBe("/dashboard");
+      expect(getLastUrl()).toBe("/dashboard/apps/app-1/details");
     });
 
     it("ignores non-dashboard paths", () => {
