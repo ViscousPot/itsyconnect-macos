@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { CreateGroupDialog } from "@/components/create-group-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CircleNotch, Plus, X, UserPlus, MagnifyingGlass, CaretRight } from "@phosphor-icons/react";
+import { CircleNotch, Plus, X, UserPlus, MagnifyingGlass, CaretRight, MagicWand } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useRegisterRefresh } from "@/lib/refresh-context";
 import { useSetBreadcrumbTitle } from "@/lib/breadcrumb-context";
@@ -40,6 +40,8 @@ export default function BuildDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [whatsNew, setWhatsNew] = useState("");
+
+  const [siblingBuilds, setSiblingBuilds] = useState<TFBuild[]>([]);
 
   const { setDirty, registerSave, registerDiscard } = useFormDirty();
   const { report: reportBuildAction, clear: clearBuildAction, registerRefresh, registerSave: registerBuildSave } = useBuildAction();
@@ -94,6 +96,20 @@ export default function BuildDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch sibling builds (same version) for "copy from build" feature
+  useEffect(() => {
+    if (!build) return;
+    fetch(`/api/apps/${appId}/testflight/builds?version=${encodeURIComponent(build.versionString)}&platform=${encodeURIComponent(build.platform)}&lite=1`)
+      .then((res) => res.ok ? res.json() : { builds: [] })
+      .then((data) => {
+        const siblings = (data.builds ?? []).filter(
+          (b: TFBuild) => b.id !== buildId && b.whatsNew,
+        );
+        setSiblingBuilds(siblings);
+      })
+      .catch(() => setSiblingBuilds([]));
+  }, [appId, buildId, build?.versionString, build?.platform]);
 
   const handleRefresh = useCallback(() => fetchData(true), [fetchData]);
   useRegisterRefresh({ onRefresh: handleRefresh, busy: loading });
@@ -289,7 +305,36 @@ export default function BuildDetailPage() {
 
       {/* What's new */}
       <section className="space-y-2">
-        <h3 className="section-title">What&apos;s new</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="section-title">What&apos;s new</h3>
+          {!isExpired && siblingBuilds.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-6 text-muted-foreground">
+                  <MagicWand size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Copy from build</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {siblingBuilds.map((sb) => (
+                      <DropdownMenuItem
+                        key={sb.id}
+                        onClick={() => {
+                          setWhatsNew(sb.whatsNew!);
+                          setDirty(sb.whatsNew !== (build.whatsNew ?? ""));
+                        }}
+                      >
+                        Build {sb.buildNumber}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
         <Card className="gap-0 py-0">
           <CardContent className="px-5 py-4">
             <Textarea
