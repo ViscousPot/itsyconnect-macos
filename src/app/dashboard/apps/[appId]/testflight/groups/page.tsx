@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api-fetch";
 import { useApps } from "@/lib/apps-context";
@@ -83,14 +84,7 @@ export default function GroupsPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   return (

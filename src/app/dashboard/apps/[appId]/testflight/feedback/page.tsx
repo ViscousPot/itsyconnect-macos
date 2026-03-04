@@ -13,12 +13,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { Camera, CheckCircle, WarningCircle, CircleNotch } from "@phosphor-icons/react";
 import { useApps } from "@/lib/apps-context";
 import { useRegisterRefresh } from "@/lib/refresh-context";
 import type { TFFeedbackItem } from "@/lib/asc/testflight";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { formatDate } from "@/lib/format";
 
 function isWithinDays(iso: string, days: number): boolean {
@@ -133,14 +133,7 @@ export default function FeedbackPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   return (

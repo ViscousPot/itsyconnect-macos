@@ -7,6 +7,7 @@ import {
   DownloadSimple,
   CurrencyDollar,
   AppWindow,
+  Package,
 } from "@phosphor-icons/react";
 import { getLastUrl } from "@/lib/nav-state";
 import {
@@ -52,18 +53,22 @@ interface AppAnalytics {
 export default function DashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { apps, loading } = useApps();
+  const { apps, loading, truncated } = useApps();
   const [analytics, setAnalytics] = useState<Record<string, AppAnalytics>>({});
   const [range, setRange] = useState<string | null>(null);
 
-  // entry=1 means proxy redirected here on app launch – go to last app
+  // entry=1 means proxy redirected here on app launch – restore last URL
   const isEntry = searchParams.get("entry") === "1";
   useEffect(() => {
     if (!isEntry || loading || apps.length === 0) return;
     const saved = getLastUrl();
-    const savedAppId = saved?.match(/^\/dashboard\/apps\/([^/?]+)/)?.[1];
+    if (!saved || saved === "/dashboard") {
+      router.replace("/dashboard");
+      return;
+    }
+    const savedAppId = saved.match(/^\/dashboard\/apps\/([^/?]+)/)?.[1];
     const appIds = new Set(apps.map((a) => a.id));
-    const target = saved && savedAppId && appIds.has(savedAppId)
+    const target = savedAppId && appIds.has(savedAppId)
       ? saved
       : `/dashboard/apps/${apps[0].id}`;
     router.replace(target);
@@ -362,6 +367,16 @@ export default function DashboardPage() {
             </Link>
           );
         })}
+        {truncated && (
+          <Link href="/settings/license">
+            <Card className="flex h-full flex-col items-center justify-center gap-2 border-dashed p-6 text-center transition-colors hover:bg-muted/50">
+              <Package className="size-5 text-muted-foreground" weight="duotone" />
+              <p className="text-sm text-muted-foreground">
+                Upgrade to Pro to see all your apps
+              </p>
+            </Card>
+          </Link>
+        )}
       </div>
     </div>
   );

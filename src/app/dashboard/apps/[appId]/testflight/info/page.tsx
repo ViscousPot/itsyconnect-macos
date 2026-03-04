@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { ArrowClockwise } from "@phosphor-icons/react";
+import { ErrorState } from "@/components/error-state";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api-fetch";
 import type { AscErrorEntry } from "@/lib/asc/errors";
@@ -403,15 +402,7 @@ export default function TestFlightInfoPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          <ArrowClockwise size={14} className="mr-1.5" />
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   const localeTag = selectedLocale && selectedLocale !== primaryLocale

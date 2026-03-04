@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner";
 import type { TFFeedbackItem } from "@/lib/asc/testflight";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { apiFetch } from "@/lib/api-fetch";
 import { formatDateTimeLong } from "@/lib/format";
 
@@ -156,14 +157,7 @@ export default function FeedbackDetailPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   if (!item) {

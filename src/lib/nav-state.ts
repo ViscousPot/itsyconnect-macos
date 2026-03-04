@@ -2,6 +2,7 @@ const NAV_KEY = "nav-state";
 
 interface NavState {
   lastUrl: string;
+  lastAppId?: string;
   apps: Record<string, string>;
 }
 
@@ -24,33 +25,42 @@ function write(state: NavState): void {
 }
 
 const APP_PREFIX = "/dashboard/apps/";
+const DASHBOARD = "/dashboard";
 
 export function saveNavigation(pathname: string, search: string): void {
-  if (!pathname.startsWith(APP_PREFIX)) return;
+  if (!pathname.startsWith(DASHBOARD)) return;
 
-  const rest = pathname.slice(APP_PREFIX.length); // "appId/subpath..."
-  const slashIdx = rest.indexOf("/");
-  const appId = slashIdx === -1 ? rest : rest.slice(0, slashIdx);
-  if (!appId) return;
-
-  const suffix = search ? `?${search}` : "";
-  const subpath = slashIdx === -1 ? "" : rest.slice(slashIdx);
+  // Strip transient params that shouldn't persist
+  const params = new URLSearchParams(search);
+  params.delete("entry");
+  const cleaned = params.toString();
+  const suffix = cleaned ? `?${cleaned}` : "";
 
   const state = read();
   state.lastUrl = pathname + suffix;
-  state.apps[appId] = subpath + suffix;
+
+  // Per-app sub-path tracking
+  if (pathname.startsWith(APP_PREFIX)) {
+    const rest = pathname.slice(APP_PREFIX.length);
+    const slashIdx = rest.indexOf("/");
+    const appId = slashIdx === -1 ? rest : rest.slice(0, slashIdx);
+    if (appId) {
+      state.lastAppId = appId;
+      const subpath = slashIdx === -1 ? "" : rest.slice(slashIdx);
+      state.apps[appId] = subpath + suffix;
+    }
+  }
+
   write(state);
 }
 
 export function getLastUrl(): string | undefined {
   const { lastUrl } = read();
-  return lastUrl && lastUrl.startsWith(APP_PREFIX) ? lastUrl : undefined;
+  return lastUrl && lastUrl.startsWith(DASHBOARD) ? lastUrl : undefined;
 }
 
 export function getLastAppId(): string | undefined {
-  const url = getLastUrl();
-  if (!url) return undefined;
-  return url.slice(APP_PREFIX.length).split("/")[0] || undefined;
+  return read().lastAppId || undefined;
 }
 
 export function getAppState(appId: string): string | undefined {

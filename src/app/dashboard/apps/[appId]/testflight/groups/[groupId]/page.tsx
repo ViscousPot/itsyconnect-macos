@@ -37,6 +37,7 @@ import { FooterPortal } from "@/lib/footer-portal-context";
 import type { TFBuild, TFGroup, TFTester } from "@/lib/asc/testflight";
 import { BUILD_STATUS_DOTS, TESTER_STATUS_DOTS } from "@/lib/asc/display-types";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { formatDate } from "@/lib/format";
 
 const TESTER_STATUS_LABELS: Record<string, string> = {
@@ -289,14 +290,7 @@ export default function GroupDetailPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   if (!group) {

@@ -2,7 +2,7 @@
 
 import { useAnalytics } from "@/lib/analytics-context";
 import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/error-state";
 
 export function AnalyticsStateGuard({ children }: { children: React.ReactNode }) {
   const { data, loading, error, pending } = useAnalytics();
@@ -27,14 +27,7 @@ export function AnalyticsStateGuard({ children }: { children: React.ReactNode })
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => window.location.reload()} />;
   }
 
   if (!data) return null;

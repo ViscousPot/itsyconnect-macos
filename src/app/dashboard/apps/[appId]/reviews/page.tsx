@@ -42,6 +42,7 @@ import { useAIStatus } from "@/lib/hooks/use-ai-status";
 import { AIRequiredDialog } from "@/components/ai-required-dialog";
 import type { AscCustomerReview } from "@/lib/asc/reviews";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 
 // ── Territory helpers ──────────────────────────────────────────────
 
@@ -603,14 +604,7 @@ export default function ReviewsPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchReviews()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchReviews()} />;
   }
 
   return (

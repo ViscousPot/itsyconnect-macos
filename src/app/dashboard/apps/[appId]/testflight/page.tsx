@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/empty-state";
+import { ErrorState } from "@/components/error-state";
 import { CreateGroupDialog } from "@/components/create-group-dialog";
 import { PaginatedList } from "@/components/paginated-list";
 import { CircleNotch, CaretDown, Prohibit, Plus, Minus, Package } from "@phosphor-icons/react";
@@ -265,14 +266,7 @@ export default function TestFlightBuildsPage() {
   }
 
   if (error) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <p className="text-sm text-muted-foreground">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => fetchData()}>
-          Retry
-        </Button>
-      </div>
-    );
+    return <ErrorState message={error} onRetry={() => fetchData()} />;
   }
 
   if (builds.length === 0) {

@@ -9,7 +9,7 @@ vi.stubGlobal("localStorage", {
   clear: () => store.clear(),
 });
 
-import { saveNavigation, getLastUrl, getAppState } from "@/lib/nav-state";
+import { saveNavigation, getLastUrl, getLastAppId, getAppState } from "@/lib/nav-state";
 
 describe("nav-state", () => {
   beforeEach(() => {
@@ -29,8 +29,27 @@ describe("nav-state", () => {
       expect(getAppState("app-1")).toBe("/store-listing?version=v1&locale=en");
     });
 
-    it("ignores non-app paths", () => {
-      saveNavigation("/dashboard/settings", "");
+    it("saves portfolio path", () => {
+      saveNavigation("/dashboard", "");
+      expect(getLastUrl()).toBe("/dashboard");
+    });
+
+    it("portfolio does not clear lastAppId from earlier navigation", () => {
+      saveNavigation("/dashboard/apps/app-1/details", "");
+      expect(getLastAppId()).toBe("app-1");
+      saveNavigation("/dashboard", "");
+      expect(getLastUrl()).toBe("/dashboard");
+      expect(getLastAppId()).toBe("app-1");
+      expect(getAppState("app-1")).toBe("/details");
+    });
+
+    it("strips entry param from saved URL", () => {
+      saveNavigation("/dashboard", "entry=1");
+      expect(getLastUrl()).toBe("/dashboard");
+    });
+
+    it("ignores non-dashboard paths", () => {
+      saveNavigation("/settings/license", "");
       expect(getLastUrl()).toBeUndefined();
     });
 
@@ -40,9 +59,10 @@ describe("nav-state", () => {
       expect(getAppState("app-2")).toBe("");
     });
 
-    it("ignores empty appId", () => {
+    it("saves lastUrl but skips per-app state for empty appId", () => {
       saveNavigation("/dashboard/apps/", "");
-      expect(getLastUrl()).toBeUndefined();
+      expect(getLastUrl()).toBe("/dashboard/apps/");
+      expect(getAppState("")).toBeUndefined();
     });
 
     it("preserves state for multiple apps", () => {
@@ -59,9 +79,21 @@ describe("nav-state", () => {
       expect(getLastUrl()).toBeUndefined();
     });
 
-    it("returns undefined for non-app URLs in storage", () => {
+    it("returns undefined for non-dashboard URLs in storage", () => {
       store.set("nav-state", JSON.stringify({ lastUrl: "/setup", apps: {} }));
       expect(getLastUrl()).toBeUndefined();
+    });
+  });
+
+  describe("getLastAppId", () => {
+    it("returns app ID from last app URL", () => {
+      saveNavigation("/dashboard/apps/app-1/details", "");
+      expect(getLastAppId()).toBe("app-1");
+    });
+
+    it("returns undefined when no app was ever visited", () => {
+      saveNavigation("/dashboard", "");
+      expect(getLastAppId()).toBeUndefined();
     });
   });
 

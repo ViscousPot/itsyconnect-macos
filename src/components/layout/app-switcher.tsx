@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { CaretUpDown, Crown, MagnifyingGlass } from "@phosphor-icons/react";
+import { CaretUpDown, Package, MagnifyingGlass } from "@phosphor-icons/react";
 import { Spinner } from "@/components/ui/spinner";
 import { useApps } from "@/lib/apps-context";
 import { useFormDirty } from "@/lib/form-dirty-context";
@@ -152,7 +152,7 @@ export function AppSwitcher() {
                 onClick={() => router.push("/settings/license")}
                 className="gap-2 p-2 text-muted-foreground"
               >
-                <Crown size={16} />
+                <Package size={16} weight="duotone" />
                 <span className="text-xs">Upgrade to Pro for all apps</span>
               </DropdownMenuItem>
             )}

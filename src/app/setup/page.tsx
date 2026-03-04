@@ -310,6 +310,9 @@ export default function SetupPage() {
               <Input
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && canAdvance()) handleNext();
+                }}
                 placeholder="My team"
                 className="text-sm"
                 autoFocus
