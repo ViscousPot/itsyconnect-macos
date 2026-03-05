@@ -8,6 +8,7 @@ const RECENT_LOAD_WINDOW_MS = 15_000;
 const recentLoadedModelByServer = new Map<string, { modelId: string; at: number }>();
 const inFlightLoads = new Map<string, Promise<string | null>>();
 const unsupportedLoadEndpointServers = new Set<string>();
+const unsupportedModelListEndpointServers = new Set<string>();
 
 /** Normalize an OpenAI-compatible base URL to the `/v1` API root. */
 export function normalizeOpenAICompatibleBaseUrl(input: string): string | null {
@@ -76,6 +77,79 @@ interface LoadModelErrorShape {
   message?: string;
 }
 
+interface LocalModelListItem {
+  key?: string;
+  loaded_instances?: Array<{ id?: string }>;
+}
+
+interface LocalModelListShape {
+  models?: LocalModelListItem[];
+}
+
+type LocalModelLoadedStatus = "loaded" | "not-loaded" | "unknown";
+
+async function getLocalModelLoadedStatus(
+  serverRoot: string,
+  modelId: string,
+  headers: HeadersInit,
+): Promise<LocalModelLoadedStatus> {
+  if (unsupportedModelListEndpointServers.has(serverRoot)) {
+    return "unknown";
+  }
+
+  try {
+    const res = await fetch(`${serverRoot}/api/v1/models`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (res.status === 404 || res.status === 405) {
+      unsupportedModelListEndpointServers.add(serverRoot);
+      return "unknown";
+    }
+
+    if (!res.ok) {
+      return "unknown";
+    }
+
+    const raw = await res.text();
+    if (!raw) {
+      return "unknown";
+    }
+
+    let payload: LocalModelListShape = {};
+    try {
+      payload = JSON.parse(raw) as LocalModelListShape;
+    } catch {
+      return "unknown";
+    }
+
+    const models = Array.isArray(payload.models) ? payload.models : [];
+    const matchedModel = models.find((model) => {
+      const key = typeof model.key === "string" ? model.key : "";
+      if (key === modelId) {
+        return true;
+      }
+      const instances = Array.isArray(model.loaded_instances) ? model.loaded_instances : [];
+      return instances.some((instance) => instance?.id === modelId);
+    });
+
+    if (!matchedModel) {
+      return "not-loaded";
+    }
+
+    const loadedInstances = Array.isArray(matchedModel.loaded_instances)
+      ? matchedModel.loaded_instances
+      : [];
+
+    return loadedInstances.length > 0 ? "loaded" : "not-loaded";
+  } catch {
+    return "unknown";
+  }
+}
+
 /**
  * Ask a local server to load a model before generation.
  *
@@ -119,6 +193,12 @@ export async function ensureLocalModelLoaded(
   }
 
   const loadPromise = (async () => {
+    const loadedStatus = await getLocalModelLoadedStatus(serverRoot, modelId, headers);
+    if (loadedStatus === "loaded") {
+      recentLoadedModelByServer.set(serverRoot, { modelId, at: Date.now() });
+      return null;
+    }
+
     try {
       const res = await fetch(`${serverRoot}/api/v1/models/load`, {
         method: "POST",
@@ -169,4 +249,5 @@ export function resetLocalModelLoadStateForTests() {
   recentLoadedModelByServer.clear();
   inFlightLoads.clear();
   unsupportedLoadEndpointServers.clear();
+  unsupportedModelListEndpointServers.clear();
 }
